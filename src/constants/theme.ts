@@ -1,65 +1,119 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import '@/global.css';
 
-import { Platform } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    bg: '#f8fafc',
+    card: '#ffffff',
+    cardMuted: '#f3f4f6',
+    cardSunken: '#e5e7eb',
+    ink: '#0f172a',
+    inkMuted: '#475569',
+    border: '#e2e8f0',
+    primary: '#10b981',
+    primaryDark: '#047857',
+    secondary: '#f59e0b',
+    secondaryDark: '#b45309',
+    secondaryInk: '#78350f',
+    success: '#10b981',
+    danger: '#ba1a1a',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    bg: '#0f172a',
+    card: '#1e293b',
+    cardMuted: '#334155',
+    cardSunken: '#475569',
+    ink: '#f8fafc',
+    inkMuted: '#cbd5e1',
+    border: '#334155',
+    primary: '#34d399',
+    primaryDark: '#10b981',
+    secondary: '#fbbf24',
+    secondaryDark: '#f59e0b',
+    secondaryInk: '#fde68a',
+    success: '#34d399',
+    danger: '#ef4444',
   },
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type ColorScheme = keyof typeof Colors;
+export type ThemeColor = keyof typeof Colors.light;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+export const FontFamily = {
+  display: 'Anton_400Regular',
+  sans: 'Inter_400Regular',
+  sansMedium: 'Inter_500Medium',
+  sansSemiBold: 'Inter_600SemiBold',
+  sansBold: 'Inter_700Bold',
+} as const;
+
+export const TypographyStyles: Record<string, TextStyle> = {
+  'display-lg': {
+    fontFamily: FontFamily.display,
+    fontSize: 48,
+    lineHeight: 53,
+    letterSpacing: 0.96,
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+  'headline-lg': {
+    fontFamily: FontFamily.display,
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: 0.32,
   },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
+  'headline-md': {
+    fontFamily: FontFamily.display,
+    fontSize: 24,
+    lineHeight: 29,
   },
-});
+  'body-lg': {
+    fontFamily: FontFamily.sans,
+    fontSize: 18,
+    lineHeight: 28,
+  },
+  'body-md': {
+    fontFamily: FontFamily.sans,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  'label-md': {
+    fontFamily: FontFamily.sansSemiBold,
+    fontSize: 14,
+    lineHeight: 20,
+    letterSpacing: 0.14,
+  },
+  'label-sm': {
+    fontFamily: FontFamily.sansBold,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.36,
+    textTransform: 'uppercase',
+  },
+  'data-mono': {
+    fontFamily: FontFamily.sansMedium,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+};
+
+export type TypographyVariant = keyof typeof TypographyStyles;
 
 export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  page: 16,
+} as const;
+
+export const Radius = {
+  sm: 2,
+  DEFAULT: 4,
+  md: 6,
+  lg: 8,
+  xl: 12,
+  full: 9999,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
