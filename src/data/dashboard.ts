@@ -58,7 +58,7 @@ export interface QuickLink {
 
 export const QUICK_LINKS: QuickLink[] = [
   { key: 'add', label: 'Add booking', icon: 'calendarDays' },
-  { key: 'reviews', label: 'Reviews', icon: 'star' },
+  { key: 'offers', label: 'Offers', icon: 'percent' },
   { key: 'customers', label: 'Customers', icon: 'users' },
   { key: 'support', label: 'Support', icon: 'helpCircle' },
 ];

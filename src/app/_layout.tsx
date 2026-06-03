@@ -74,6 +74,9 @@ export default function RootLayout() {
             <Stack.Screen name="venue-calendar" />
             <Stack.Screen name="venue-edit/[section]" />
             <Stack.Screen name="memberships" />
+            <Stack.Screen name="offers" />
+            <Stack.Screen name="offer/new" />
+            <Stack.Screen name="offer/[id]" />
             <Stack.Screen name="membership/new" />
             <Stack.Screen name="membership/book" />
             <Stack.Screen name="member/[id]" />

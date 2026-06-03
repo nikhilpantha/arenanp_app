@@ -5,6 +5,7 @@ import { Button, Screen, ScreenHeader, Typography } from '@/components/common';
 import { CustomerInsights } from '@/components/venue/CustomerInsights';
 import { CustomerHeaderCard } from '@/components/venue/customers/CustomerHeaderCard';
 import { LoyaltyProgress } from '@/components/venue/LoyaltyProgress';
+import { SubjectOffers } from '@/components/venue/offers/SubjectOffers';
 import { CUSTOMERS } from '@/data/customers';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -37,6 +38,7 @@ export default function CustomerDetailScreen() {
         <CustomerHeaderCard customer={customer} onCall={() => Alert.alert('Calling…', customer.phone)} />
         <CustomerInsights customer={customer} />
         <LoyaltyProgress gamesPlayed={customer.gamesPlayed} />
+        <SubjectOffers subjectType="customer" subjectId={customer.id} games={customer.gamesPlayed} />
       </View>
 
       <View className="pt-xl">

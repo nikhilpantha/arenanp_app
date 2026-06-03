@@ -243,6 +243,49 @@ export interface LoyaltyConfig {
   freeAfter: number; // free game after every N paid games
 }
 
+// ── Offers / promotions ──────────────────────────────────────────────────────
+// A venue offer is a reward + a trigger + a scope. The loyalty punch-card is just
+// one offer (reward: free-game, trigger: every-nth). Visuals are derived from the
+// reward at render time (see components/venue/offers/offer-visual), not stored.
+
+/** What the customer gets. */
+export type OfferRewardKind = 'free-game' | 'percent' | 'flat';
+/** How they qualify. */
+export type OfferTriggerKind = 'every-nth' | 'happy-hour' | 'manual';
+/** Who the offer is for. */
+export type OfferAudience = 'all' | 'individual' | 'team' | 'member';
+export type OfferStatus = 'active' | 'paused' | 'expired';
+
+export interface Offer {
+  id: string;
+  title: string;
+  description?: string;
+  reward: OfferRewardKind;
+  rewardValue?: number; // percent (0–100) or NPR; omitted for free-game
+  trigger: OfferTriggerKind;
+  everyGames?: number; // every-nth: reward on every Nth game
+  days?: DayOfWeek[]; // happy-hour: qualifying days
+  startHour?: number; // happy-hour: 0–23
+  endHour?: number; // happy-hour: 0–23
+  audience: OfferAudience;
+  sports?: SportType[]; // undefined/empty = all sports
+  status: OfferStatus;
+}
+
+export type OfferSubjectType = 'customer' | 'team';
+export type OfferClaimStatus = 'available' | 'redeemed' | 'expired';
+
+/** A manual offer granted to a customer/team, redeemed at their next booking. */
+export interface OfferClaim {
+  id: string;
+  offerId: string;
+  subjectType: OfferSubjectType;
+  subjectId: string;
+  status: OfferClaimStatus;
+  claimedAt: string; // ISO yyyy-mm-dd
+  redeemedAt?: string;
+}
+
 /** A pending online booking awaiting the owner's accept/decline. */
 export interface BookingRequest {
   id: string;

@@ -16,7 +16,8 @@ export default function VenueProfile() {
   const signOut = useAuthStore((s) => s.signOut);
 
   const onManagePress = (row: ProfileRowItem) => {
-    if (row.section) router.push({ pathname: '/venue-edit/[section]', params: { section: row.section } });
+    if (row.href) router.push(row.href);
+    else if (row.section) router.push({ pathname: '/venue-edit/[section]', params: { section: row.section } });
   };
 
   const onAccountPress = (row: ProfileRowItem) => {

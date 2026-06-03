@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Card, Icon, Screen, ScreenHeader, Typography } from '@/components/common';
+import { SubjectOffers } from '@/components/venue/offers/SubjectOffers';
 import { SPORTS_CATALOG } from '@/data/sports';
 import { getTeam } from '@/data/teams';
 import { useTheme } from '@/hooks/use-theme';
@@ -46,6 +47,11 @@ export default function TeamDetailScreen() {
               <Stat value={String(team.history.length)} label="Recent" theme={theme} />
             </View>
           </Card>
+
+          {/* Offers the team can use, claim or work towards */}
+          <View className="pt-lg">
+            <SubjectOffers subjectType="team" subjectId={team.id} games={team.totalGames} />
+          </View>
 
           {/* Roster */}
           <View className="gap-sm pt-lg">

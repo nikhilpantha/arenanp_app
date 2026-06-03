@@ -6,7 +6,14 @@ import { Shadow } from '@/constants/theme';
 import { QUICK_LINKS } from '@/data/dashboard';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Row of shortcut tiles. Only "Add booking" is wired for now (TODO: the rest). */
+// Where each shortcut tile goes (support is a stub for now).
+const ROUTES: Record<string, '/new-booking' | '/offers' | '/customers' | undefined> = {
+  add: '/new-booking',
+  offers: '/offers',
+  customers: '/customers',
+};
+
+/** Row of shortcut tiles linking to the key venue actions. */
 export function QuickActions() {
   const theme = useTheme();
   const router = useRouter();
@@ -15,12 +22,14 @@ export function QuickActions() {
     <View className="gap-md pt-xl">
       <SectionHeader title="Quick actions" />
       <View className="flex-row gap-sm">
-        {QUICK_LINKS.map((q) => (
+        {QUICK_LINKS.map((q) => {
+          const href = ROUTES[q.key];
+          return (
           <Pressable
             key={q.key}
             accessibilityRole="button"
             accessibilityLabel={q.label}
-            onPress={q.key === 'add' ? () => router.push('/new-booking') : undefined}
+            onPress={href ? () => router.push(href) : undefined}
             className="flex-1 items-center gap-xs">
             <View
               className="h-14 w-14 items-center justify-center rounded-2xl"
@@ -31,7 +40,8 @@ export function QuickActions() {
               {q.label}
             </Typography>
           </Pressable>
-        ))}
+          );
+        })}
       </View>
     </View>
   );

@@ -18,6 +18,7 @@ import { FormInput, FormPhoneInput } from '@/components/form';
 import { BookingPriceSummary } from '@/components/venue/bookings/BookingPriceSummary';
 import { LoyaltyHintCard } from '@/components/venue/bookings/LoyaltyHintCard';
 import { TeamPicker } from '@/components/venue/bookings/TeamPicker';
+import { OfferSelect } from '@/components/venue/offers/OfferSelect';
 import { VENUE_COURTS } from '@/data/bookings';
 import { getCustomerByPhone } from '@/data/customers';
 import { SPORTS_CATALOG } from '@/data/sports';
@@ -25,14 +26,19 @@ import { useTheme } from '@/hooks/use-theme';
 import { type NewBookingFormValues, newBookingSchema } from '@/lib/booking-schemas';
 import { useYupForm } from '@/lib/forms';
 import { computeLoyalty } from '@/lib/loyalty';
-import type { PaymentMethod, PaymentStatus, SportType, Team } from '@/types';
+import { applyOffer, type SubjectOfferEntry } from '@/lib/offers';
+import { useOfferStore } from '@/stores';
+import type { DayOfWeek, OfferSubjectType, PaymentMethod, PaymentStatus, SportType, Team } from '@/types';
 
 type BookedBy = 'individual' | 'team';
+
+const DOW: DayOfWeek[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
 export default function NewBookingScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ sport?: string; court?: string; time?: string; price?: string }>();
+  const redeemClaim = useOfferStore((s) => s.redeemClaim);
 
   const defaultCourt = VENUE_COURTS[0];
   const sport = (params.sport as SportType) ?? defaultCourt.sport;
@@ -57,24 +63,40 @@ export default function NewBookingScreen() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('paid');
   const [amountPaid, setAmountPaid] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('cash');
+  const [offer, setOffer] = useState<SubjectOfferEntry | null>(null);
 
-  // Loyalty (free game) is tracked per subject: an individual by phone, or a team by its
-  // total games. A known individual shows progress; a new valid number starts a counter.
+  // The loyalty subject: an individual by phone, or the selected team.
   const phone = form.watch('phone');
   const phoneReady = bookedBy === 'individual' && phone?.length === 10;
   const customer = phoneReady ? getCustomerByPhone(phone) : null;
   const isNewCustomer = Boolean(phoneReady && !customer);
   const individualLoyalty = customer ? computeLoyalty(customer.gamesPlayed) : null;
   const teamLoyalty = selectedTeam ? computeLoyalty(selectedTeam.totalGames) : null;
-  const isFree =
-    bookedBy === 'individual' ? (individualLoyalty?.isFreeNext ?? false) : (teamLoyalty?.isFreeNext ?? false);
 
-  // Pricing.
+  const subjectType: OfferSubjectType = bookedBy === 'team' ? 'team' : 'customer';
+  const subjectId = bookedBy === 'team' ? selectedTeam?.id : customer?.id;
+  const subjectGames = bookedBy === 'team' ? (selectedTeam?.totalGames ?? 0) : (customer?.gamesPlayed ?? 0);
+
+  // Drop the chosen offer whenever the subject changes (it may no longer apply) — the
+  // "reset state on prop change during render" pattern, so no effect is needed.
+  const subjectKey = `${bookedBy}:${subjectId ?? ''}`;
+  const [prevSubjectKey, setPrevSubjectKey] = useState(subjectKey);
+  if (subjectKey !== prevSubjectKey) {
+    setPrevSubjectKey(subjectKey);
+    setOffer(null);
+  }
+
+  // Pricing — an applied offer overrides any manual discount.
   const base = unitPrice * duration;
-  const rawDiscount = Number(discountValue) || 0;
-  const discountAmt = isFree
-    ? 0
-    : Math.min(base, discountType === 'percent' ? Math.round((base * rawDiscount) / 100) : rawDiscount);
+  const manualRaw = Number(discountValue) || 0;
+  const manualDiscount = Math.min(
+    base,
+    discountType === 'percent' ? Math.round((base * manualRaw) / 100) : manualRaw,
+  );
+  const effect = applyOffer(offer?.offer ?? null, base);
+  const isFree = effect.isFree;
+  const discountAmt = offer ? effect.discountAmt : manualDiscount;
+  const discountReasonLabel = offer ? offer.offer.title : discountReason;
   const total = isFree ? 0 : Math.max(0, base - discountAmt);
   const totalLabel = isFree ? 'Free' : `Rs ${total}`;
 
@@ -92,8 +114,10 @@ export default function NewBookingScreen() {
         : `Pending · Rs ${total} due`;
 
   const finish = (who: string) => {
-    // TODO(backend): persist booking (status, payment status/method) + bump loyalty games.
-    Alert.alert('Booking confirmed', `${who} · ${court} · ${displayTime} · ${totalLabel}\n${paymentLabel}`, [
+    // TODO(backend): persist booking + bump loyalty games. A claimed offer is consumed here.
+    if (offer?.claim) redeemClaim(offer.claim.id);
+    const offerLine = offer ? `\nOffer · ${offer.offer.title}` : '';
+    Alert.alert('Booking confirmed', `${who} · ${court} · ${displayTime} · ${totalLabel}\n${paymentLabel}${offerLine}`, [
       { text: 'Done', onPress: () => router.back() },
     ]);
   };
@@ -227,6 +251,20 @@ export default function NewBookingScreen() {
         </View>
       )}
 
+      {/* Offers the subject can apply right now (loyalty / happy-hour / claimed promos). */}
+      {subjectId ? (
+        <OfferSelect
+          subjectType={subjectType}
+          subjectId={subjectId}
+          games={subjectGames}
+          sport={sport}
+          day={DOW[new Date().getDay()]}
+          hour={Number(startTime.split(':')[0])}
+          selectedId={offer?.offer.id ?? null}
+          onChange={setOffer}
+        />
+      ) : null}
+
       {/* Start time + duration */}
       <View className="pt-lg">
         <TimeSelect label="Start time" value={startTime} onChange={setStartTime} />
@@ -238,8 +276,8 @@ export default function NewBookingScreen() {
         <NumberStepper value={duration} onChange={setDuration} min={1} max={6} />
       </View>
 
-      {/* Discount */}
-      {!isFree ? (
+      {/* Discount — only when no offer is applied (the offer is the discount). */}
+      {!offer && !isFree ? (
         <View className="gap-sm pt-lg">
           <Typography variant="label-md" color={theme.inkMuted}>
             Discount (optional)
@@ -323,7 +361,7 @@ export default function NewBookingScreen() {
         duration={duration}
         base={base}
         discountAmt={discountAmt}
-        discountReason={discountReason}
+        discountReason={discountReasonLabel}
         isFree={isFree}
         totalLabel={totalLabel}
       />
