@@ -1,6 +1,4 @@
-import '@/global.css';
-
-import { Platform, type TextStyle } from 'react-native';
+import { Platform, type TextStyle, type ViewStyle } from 'react-native';
 
 export const Colors = {
   light: {
@@ -40,12 +38,33 @@ export const Colors = {
 export type ColorScheme = keyof typeof Colors;
 export type ThemeColor = keyof typeof Colors.light;
 
+// Multi-stop background gradients. RN-only (expo-linear-gradient), so these live here
+// rather than tailwind.config.js. The light `screen` gradient is the soft mint→white→mint
+// wash used behind app screens; cards/content sit on top of it.
+export const Gradients = {
+  light: {
+    // Faint mint at the bottom-left fading diagonally into a soft light-gray top-right.
+    // Kept light so the bar/footer area reads white (the old stop was a saturated mint).
+    screen: ['#dff2ea', '#e9f3ee', '#f2f6f9', '#f8fafc'],
+    // Venue-owner counterpart: a warm amber glow fading into a warm off-white. Kept
+    // fully warm end-to-end so it never muddies into green against cool grays.
+    screenOwner: ['#fbe2ab', '#fbeecb', '#fdf6e8', '#fdfaf3'],
+    screenLocations: [0, 0.28, 0.6, 1],
+  },
+  dark: {
+    screen: ['#0b3b2c', '#122a3f', '#0f172a', '#0f172a'],
+    screenOwner: ['#3b2e0b', '#2a1d08', '#171206', '#0f0c07'],
+    screenLocations: [0, 0.28, 0.6, 1],
+  },
+} as const;
+
 export const FontFamily = {
-  display: 'Anton_400Regular',
-  sans: 'Inter_400Regular',
-  sansMedium: 'Inter_500Medium',
-  sansSemiBold: 'Inter_600SemiBold',
-  sansBold: 'Inter_700Bold',
+  display: 'PlusJakartaSans_800ExtraBold',
+  sans: 'PlusJakartaSans_400Regular',
+  sansMedium: 'PlusJakartaSans_500Medium',
+  sansSemiBold: 'PlusJakartaSans_600SemiBold',
+  sansBold: 'PlusJakartaSans_700Bold',
+  sansExtraBold: 'PlusJakartaSans_800ExtraBold',
 } as const;
 
 export const TypographyStyles: Record<string, TextStyle> = {
@@ -75,6 +94,12 @@ export const TypographyStyles: Record<string, TextStyle> = {
     fontFamily: FontFamily.sans,
     fontSize: 16,
     lineHeight: 24,
+  },
+  'label-lg': {
+    fontFamily: FontFamily.sansSemiBold,
+    fontSize: 16,
+    lineHeight: 22,
+    letterSpacing: 0.16,
   },
   'label-md': {
     fontFamily: FontFamily.sansSemiBold,
@@ -107,13 +132,48 @@ export const Spacing = {
   page: 16,
 } as const;
 
+// Approx. height of the native bottom tab bar (excludes the safe-area inset, which is
+// added on top). Used to keep scroll content + the FAB clear of the tab bar.
+export const TAB_BAR_HEIGHT = Platform.select({ ios: 49, android: 64, default: 56 }) as number;
+
 export const Radius = {
   sm: 2,
   DEFAULT: 4,
   md: 6,
   lg: 8,
   xl: 12,
+  '2xl': 16,
+  '3xl': 24,
   full: 9999,
+} as const;
+
+export const Shadow: Record<'none' | 'sm' | 'md' | 'lg', ViewStyle> = {
+  none: {},
+  sm: {
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  lg: {
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 6,
+  },
+};
+
+export const TouchTarget = {
+  min: 44,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

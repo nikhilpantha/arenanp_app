@@ -1,0 +1,121 @@
+import { View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+
+import { Card, Icon, Screen, ScreenHeader, Typography } from '@/components/common';
+import { SPORTS_CATALOG } from '@/data/sports';
+import { getTeam } from '@/data/teams';
+import { useTheme } from '@/hooks/use-theme';
+import { computeLoyalty } from '@/lib/loyalty';
+
+export default function TeamDetailScreen() {
+  const theme = useTheme();
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const team = getTeam(id ?? '');
+
+  return (
+    <Screen scroll>
+      <View className="pt-sm">
+        <ScreenHeader title="Team" onBack={() => router.back()} />
+      </View>
+
+      {!team ? (
+        <View className="flex-1 items-center justify-center gap-sm pt-xl">
+          <Icon name="users" size={28} color={theme.inkMuted} />
+          <Typography variant="label-lg">Team not found</Typography>
+        </View>
+      ) : (
+        <>
+          {/* Header + totals */}
+          <Card elevation="md" className="mt-md gap-md">
+            <View className="flex-row items-center gap-md">
+              <View
+                className="h-14 w-14 items-center justify-center rounded-2xl"
+                style={{ backgroundColor: theme.cardMuted }}>
+                <Icon name="users" size={26} color={theme.primary} />
+              </View>
+              <View className="flex-1">
+                <Typography variant="headline-md">{team.name}</Typography>
+                <Typography variant="body-md" color={theme.inkMuted}>
+                  {team.members.length} members
+                </Typography>
+              </View>
+            </View>
+            <View className="flex-row gap-md">
+              <Stat value={String(team.totalGames)} label="Total games" theme={theme} />
+              <Stat value={String(team.history.length)} label="Recent" theme={theme} />
+            </View>
+          </Card>
+
+          {/* Roster */}
+          <View className="gap-sm pt-lg">
+            <Typography variant="label-md" color={theme.inkMuted}>
+              Players · loyalty
+            </Typography>
+            <Card elevation="sm">
+              {team.members.map((m, i) => {
+                const l = computeLoyalty(m.gamesPlayed);
+                return (
+                  <View
+                    key={m.id}
+                    className="flex-row items-center justify-between py-sm"
+                    style={i < team.members.length - 1 ? { borderBottomWidth: 1, borderColor: theme.border } : undefined}>
+                    <Typography variant="label-md">{m.name}</Typography>
+                    <Typography
+                      variant="label-sm"
+                      color={l.isFreeNext ? theme.primary : theme.inkMuted}
+                      style={{ textTransform: 'none' }}>
+                      {l.isFreeNext ? '🎉 Free game' : `${l.gamesPlayed}/${l.freeAfter}`}
+                    </Typography>
+                  </View>
+                );
+              })}
+            </Card>
+          </View>
+
+          {/* History */}
+          <View className="gap-sm pt-lg">
+            <Typography variant="label-md" color={theme.inkMuted}>
+              Game history
+            </Typography>
+            <Card elevation="sm">
+              {team.history.map((g, i) => {
+                const entry = SPORTS_CATALOG.find((e) => e.sport === g.sport);
+                return (
+                  <View
+                    key={g.id}
+                    className="flex-row items-center gap-md py-sm"
+                    style={i < team.history.length - 1 ? { borderBottomWidth: 1, borderColor: theme.border } : undefined}>
+                    <Typography variant="label-md" style={{ textTransform: 'none' }}>
+                      {entry?.emoji ?? '🏟️'}
+                    </Typography>
+                    <View className="flex-1">
+                      <Typography variant="label-md">
+                        {entry?.label ?? g.sport} · {g.court}
+                      </Typography>
+                      <Typography variant="body-md" color={theme.inkMuted}>
+                        {g.date}
+                        {g.result ? ` · ${g.result}` : ''}
+                      </Typography>
+                    </View>
+                  </View>
+                );
+              })}
+            </Card>
+          </View>
+        </>
+      )}
+    </Screen>
+  );
+}
+
+function Stat({ value, label, theme }: { value: string; label: string; theme: ReturnType<typeof useTheme> }) {
+  return (
+    <Card variant="muted" elevation="none" className="flex-1 gap-[2px]">
+      <Typography variant="headline-md">{value}</Typography>
+      <Typography variant="label-sm" color={theme.inkMuted}>
+        {label}
+      </Typography>
+    </Card>
+  );
+}

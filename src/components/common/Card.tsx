@@ -7,14 +7,17 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type CardVariant = 'default' | 'muted' | 'sunken';
+export type CardElevation = 'none' | 'sm' | 'md' | 'lg';
 
 export interface CardProps {
   children: React.ReactNode;
   variant?: CardVariant;
+  elevation?: CardElevation;
+  bordered?: boolean;
   onPress?: (e: GestureResponderEvent) => void;
   style?: StyleProp<ViewStyle>;
   className?: string;
@@ -24,6 +27,8 @@ export interface CardProps {
 export function Card({
   children,
   variant = 'default',
+  elevation = 'sm',
+  bordered = false,
   onPress,
   style,
   className,
@@ -36,7 +41,13 @@ export function Card({
   const content = (
     <View
       className={className}
-      style={[styles.base, { backgroundColor: bg, borderColor: theme.border }, style]}>
+      style={[
+        styles.base,
+        { backgroundColor: bg },
+        bordered && { borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border },
+        Shadow[elevation],
+        style,
+      ]}>
       {children}
     </View>
   );
@@ -45,7 +56,7 @@ export function Card({
     return (
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+        style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}
         testID={testID}>
         {content}
       </Pressable>
@@ -57,8 +68,7 @@ export function Card({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: Radius.xl,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius['3xl'],
     padding: Spacing.md,
   },
 });

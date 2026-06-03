@@ -1,0 +1,42 @@
+{
+  "id": "u_001",
+  "name": "Nikhil",
+  "avatarUrl": "",
+  "location": "MF97+CXX, H10, Butwal",
+  "notifications": [
+    {
+      "id": "n_001",
+      "title": "Booking confirmed",
+      "body": "Your booking for Court 3 at 5 PM is confirmed.",
+      "timestamp": "2026-05-23T14:12:00Z",
+      "read": false,
+      "link": "/inventory"
+    },
+    {
+      "id": "n_002",
+      "title": "Payout processed",
+      "body": "Your weekly payout has been processed.",
+      "timestamp": "2026-05-20T09:30:00Z",
+      "read": true,
+      "link": "/finance/wallets"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m_001",
+      "title": "Welcome to Arena",
+      "body": "Thanks for joining — start by adding your first venue.",
+      "timestamp": "2026-05-01T08:00:00Z",
+      "read": false,
+      "link": "/venues"
+    },
+    {
+      "id": "m_002",
+      "title": "Support reply",
+      "body": "We resolved your ticket #42 — check details.",
+      "timestamp": "2026-04-28T12:10:00Z",
+      "read": true,
+      "link": "/support/42"
+    }
+  ]
+}
