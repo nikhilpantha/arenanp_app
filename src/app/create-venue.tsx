@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { Button, FormScreen, ScreenHeader, StepProgress, Typography } from '@/components/common';
 import {
@@ -16,25 +17,30 @@ import { StepServicesPricing } from '@/components/venue/onboarding/StepServicesP
 import { StepVerification } from '@/components/venue/onboarding/StepVerification';
 import { useTheme } from '@/hooks/use-theme';
 import { useYupForm } from '@/lib/forms';
-import { clearVenueDraft, loadVenueDraft, saveVenueDraft } from '@/lib/onboarding-draft';
 import { submitVenueDraft } from '@/lib/venues';
-import { useAuthStore } from '@/stores';
+import { useActiveVenueStore, useAuthStore } from '@/stores';
 
 const STEPS = [
-  { title: 'Venue basics', subtitle: 'Photos, name and contact details.', scroll: true },
+  { title: 'Venue basics', subtitle: 'Cover photo, name and contact details.', scroll: true },
   { title: 'Where is your venue?', subtitle: 'Search or drop a pin so players find you.', scroll: false },
-  { title: 'Sports & pricing', subtitle: 'What you offer, courts, slots and price.', scroll: true },
+  { title: 'Sports & pricing', subtitle: 'Pick a sport and add at least one court.', scroll: true },
   { title: 'Operating hours', subtitle: 'When players can book.', scroll: true },
-  { title: 'Verification', subtitle: 'Optional — earn a Verified badge.', scroll: true },
+  { title: 'Verification', subtitle: 'Optional — documents for the Verified badge.', scroll: true },
 ] as const;
 
 const LAST = STEPS.length - 1;
 
-export default function VenueCreate() {
+/**
+ * Add a venue from the dashboard. Walks the multi-step form (basics → location →
+ * sports & courts → hours → optional docs), then submits. The venue is created
+ * PENDING (a super admin approves it before it's listed); on success we re-fetch
+ * identity, make the new venue active, and return to the dashboard.
+ */
+export default function CreateVenue() {
   const theme = useTheme();
-  const userId = useAuthStore((s) => s.session?.user.id);
-  const completeVenueOnboarding = useAuthStore((s) => s.completeVenueOnboarding);
-  const signOut = useAuthStore((s) => s.signOut);
+  const router = useRouter();
+  const reloadIdentity = useAuthStore((s) => s.reloadIdentity);
+  const setActiveVenueId = useActiveVenueStore((s) => s.setActiveVenueId);
 
   const form = useYupForm<typeof venueSchema>({
     schema: venueSchema,
@@ -44,38 +50,21 @@ export default function VenueCreate() {
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  const hydrated = useRef(false);
 
-  // Resume a saved draft after an app restart.
-  useEffect(() => {
-    if (!userId || hydrated.current) return;
-    hydrated.current = true;
-    void loadVenueDraft(userId).then((draft) => {
-      if (draft) form.reset({ ...VENUE_FORM_DEFAULTS, ...draft } as Partial<VenueFormValues>);
-    });
-  }, [userId, form]);
-
-  const persist = () => {
-    if (userId) void saveVenueDraft(userId, form.getValues());
-  };
-
-  // Submit the venue and finish onboarding. `skipVerification` drops any uploaded docs so
-  // the venue is created unverified (the Skip action on the last step).
+  // `skipVerification` drops any uploaded docs so the venue is created without them.
   const finalize = async ({ skipVerification = false } = {}) => {
     if (busy) return;
     setError(undefined);
-    if (skipVerification) {
-      form.setValue('verification', undefined, { shouldValidate: false });
-    }
+    if (skipVerification) form.setValue('verification', undefined, { shouldValidate: false });
     if (!(await form.trigger())) return;
     setBusy(true);
     try {
-      await submitVenueDraft(toVenueDraft(form.getValues()));
-      if (userId) await clearVenueDraft(userId);
-      await completeVenueOnboarding();
-      // status → 'authed' (owner) → root guard swaps to the venue dashboard.
+      const venueId = await submitVenueDraft(toVenueDraft(form.getValues()));
+      await reloadIdentity();
+      setActiveVenueId(venueId);
+      router.back();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save your venue. Try again.');
+      setError(e instanceof Error ? e.message : 'Could not create your venue. Try again.');
       setBusy(false);
     }
   };
@@ -83,26 +72,16 @@ export default function VenueCreate() {
   const onPrimary = async () => {
     if (busy) return;
     setError(undefined);
-
     if (step < LAST) {
-      if (await form.trigger(STEP_FIELDS[step])) {
-        persist();
-        setStep((s) => s + 1);
-      }
+      if (await form.trigger(STEP_FIELDS[step])) setStep((s) => s + 1);
       return;
     }
-
     await finalize();
   };
 
   const onBack = () => {
-    if (step > 0) {
-      persist();
-      setStep((s) => s - 1);
-    } else {
-      // First step has nothing behind it in onboarding — back is the sign-out escape.
-      void signOut();
-    }
+    if (step > 0) setStep((s) => s - 1);
+    else router.back();
   };
 
   const meta = STEPS[step];

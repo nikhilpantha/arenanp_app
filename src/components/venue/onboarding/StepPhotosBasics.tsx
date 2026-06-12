@@ -17,13 +17,15 @@ export function StepPhotosBasics({ form }: { form: UseFormReturn<VenueFormValues
         label="Cover photo"
         hint="The main image shown on your listing"
         variant="cover"
+        category="VENUE_COVER"
         value={coverPhoto}
-        onChange={(uri) => form.setValue('coverPhoto', uri, { shouldValidate: true })}
+        onChange={(key) => form.setValue('coverPhoto', key, { shouldValidate: true })}
       />
       <PhotoGalleryPicker
         label="More photos (optional)"
+        category="VENUE_IMAGE"
         value={photos}
-        onChange={(uris) => form.setValue('photos', uris, { shouldValidate: true })}
+        onChange={(keys) => form.setValue('photos', keys, { shouldValidate: true })}
       />
       <FormInput
         control={form.control}

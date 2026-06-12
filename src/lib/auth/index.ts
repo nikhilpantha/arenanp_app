@@ -1,12 +1,11 @@
-import { mockAuth } from './mock-auth';
+import { apiAuth } from './api-auth';
 import type { AuthProvider } from './provider';
 
 export type { AuthProvider, AuthSession, AuthUser } from './provider';
 
 /**
- * Active auth backend. Frontend-only for now → mock (no network).
- *
- * When the API is ready, add `./api-auth.ts` implementing AuthProvider and swap
- * this line (`export const authProvider = apiAuth;`). Nothing else changes.
+ * Active auth backend — the live GraphQL API. The endpoint is configured via
+ * EXPO_PUBLIC_API_URL (see lib/api/client.ts). Screens + stores talk to this
+ * seam only, so the backend stays invisible to them.
  */
-export const authProvider: AuthProvider = mockAuth;
+export const authProvider: AuthProvider = apiAuth;

@@ -1,7 +1,6 @@
 import { View } from 'react-native';
 
-import { Badge, Button, Card, Icon, type IconName, Typography } from '@/components/common';
-import { SPORTS_CATALOG } from '@/data/sports';
+import { Badge, Button, Card, Icon, type IconName, SportGlyph, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
 import type { RecurringBooking } from '@/types';
 
@@ -20,7 +19,6 @@ export function RecurringCard({
   onCancel: () => void;
 }) {
   const theme = useTheme();
-  const emoji = SPORTS_CATALOG.find((e) => e.sport === booking.sport)?.emoji ?? '🏟️';
   const badge = recurringBadge(booking.status);
   const paused = booking.status === 'paused';
 
@@ -34,11 +32,7 @@ export function RecurringCard({
   return (
     <Card elevation="sm" className="gap-md">
       <View className="flex-row items-center gap-md">
-        <View className="h-11 w-11 items-center justify-center rounded-2xl" style={{ backgroundColor: theme.cardMuted }}>
-          <Typography variant="headline-md" style={{ textTransform: 'none' }}>
-            {emoji}
-          </Typography>
-        </View>
+        <SportGlyph slug={booking.sport} size={44} />
         <View className="flex-1 gap-[2px]">
           <Typography variant="label-lg">{booking.customer}</Typography>
           <Typography variant="body-md" color={theme.inkMuted}>

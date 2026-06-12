@@ -36,7 +36,12 @@ export default function SignupScreen() {
     setSubmitting(true);
     const phone = toE164(values.phone);
     try {
-      await signUp({ phone, password: values.password, fullName: values.fullName.trim() });
+      await signUp({
+        phone,
+        password: values.password,
+        fullName: values.fullName.trim(),
+        photo: values.photo || undefined,
+      });
       router.push({ pathname: '/verify', params: { phone } });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create your account. Try again.');

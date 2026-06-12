@@ -48,12 +48,12 @@ export const Gradients = {
     screen: ['#dff2ea', '#e9f3ee', '#f2f6f9', '#f8fafc'],
     // Venue-owner counterpart: a warm amber glow fading into a warm off-white. Kept
     // fully warm end-to-end so it never muddies into green against cool grays.
-    screenOwner: ['#fbe2ab', '#fbeecb', '#fdf6e8', '#fdfaf3'],
+    screenVenue: ['#fbe2ab', '#fbeecb', '#fdf6e8', '#fdfaf3'],
     screenLocations: [0, 0.28, 0.6, 1],
   },
   dark: {
     screen: ['#0b3b2c', '#122a3f', '#0f172a', '#0f172a'],
-    screenOwner: ['#3b2e0b', '#2a1d08', '#171206', '#0f0c07'],
+    screenVenue: ['#3b2e0b', '#2a1d08', '#171206', '#0f0c07'],
     screenLocations: [0, 0.28, 0.6, 1],
   },
 } as const;

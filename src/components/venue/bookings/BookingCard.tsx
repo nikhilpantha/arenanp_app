@@ -1,7 +1,6 @@
 import { Pressable, View } from 'react-native';
 
-import { Badge, Card, Icon, Typography } from '@/components/common';
-import { SPORTS_CATALOG } from '@/data/sports';
+import { Badge, Card, Icon, SportGlyph, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
 import type { VenueBooking } from '@/types';
 
@@ -18,7 +17,6 @@ export function BookingCard({
   onManage: () => void;
 }) {
   const theme = useTheme();
-  const emoji = SPORTS_CATALOG.find((e) => e.sport === booking.sport)?.emoji ?? '🏟️';
   const status = statusBadge(booking.status);
   const pay = paymentBadge(booking);
 
@@ -41,9 +39,16 @@ export function BookingCard({
         <Typography variant="label-lg" numberOfLines={1}>
           {booking.customer}
         </Typography>
-        <Typography variant="body-md" color={theme.inkMuted} numberOfLines={1}>
-          {emoji} {booking.court}
-        </Typography>
+        <View className="flex-row items-center gap-xs">
+          <SportGlyph slug={booking.sport} size={16} />
+          <Typography
+            variant="body-md"
+            color={theme.inkMuted}
+            numberOfLines={1}
+            style={{ flexShrink: 1 }}>
+            {booking.court}
+          </Typography>
+        </View>
         <View className="flex-row flex-wrap gap-xs">
           <Badge variant={status.variant}>{status.label}</Badge>
           <Badge variant={pay.variant}>{pay.label}</Badge>

@@ -8,11 +8,11 @@ import { LoginForm } from '@/components/auth';
 import { Icon, type IconName, Typography } from '@/components/common';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { UserRole } from '@/types';
+import type { Panel } from '@/types';
 
-// The intro hands us the role so the hero dresses itself as the player or venue experience.
+// The intro hands us the panel so the hero dresses itself as the player or venue experience.
 const ROLE_HERO: Record<
-  'player' | 'owner',
+  Panel,
   {
     eyebrow: string;
     title: string;
@@ -28,12 +28,12 @@ const ROLE_HERO: Record<
     icon: 'trophy',
     gradient: ['#34d399', '#10b981', '#047857'],
   },
-  owner: {
-    eyebrow: 'Venue Owner',
+  venue: {
+    eyebrow: 'Venue',
     title: 'Venue login',
     subtitle: 'Manage your courts, bookings and revenue.',
     icon: 'building',
-    gradient: ['#fbbf24', '#f59e0b', '#b45309'],
+    gradient: ['#34d399', '#10b981', '#047857'],
   },
 };
 
@@ -42,8 +42,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const { role } = useLocalSearchParams<{ role?: UserRole }>();
-  const hero = ROLE_HERO[role === 'owner' ? 'owner' : 'player'];
+  const { role } = useLocalSearchParams<{ role?: Panel }>();
+  const hero = ROLE_HERO[role === 'venue' ? 'venue' : 'player'];
   const bottomGap = Math.max(insets.bottom, Spacing.md);
 
   return (

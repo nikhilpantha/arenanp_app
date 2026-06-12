@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import {
@@ -11,6 +11,7 @@ import {
   NumberStepper,
   ScreenHeader,
   Segmented,
+  SportGlyph,
   TimeSelect,
   Typography,
 } from '@/components/common';
@@ -21,8 +22,13 @@ import { TeamPicker } from '@/components/venue/bookings/TeamPicker';
 import { OfferSelect } from '@/components/venue/offers/OfferSelect';
 import { VENUE_COURTS } from '@/data/bookings';
 import { getCustomerByPhone } from '@/data/customers';
-import { SPORTS_CATALOG } from '@/data/sports';
 import { useTheme } from '@/hooks/use-theme';
+import { useSportBySlug } from '@/lib/api/sports';
+import {
+  useBookingsApiEnabled,
+  useCreateVenueBooking,
+  useVenueCourts,
+} from '@/lib/api/venue-bookings';
 import { type NewBookingFormValues, newBookingSchema } from '@/lib/booking-schemas';
 import { useYupForm } from '@/lib/forms';
 import { computeLoyalty } from '@/lib/loyalty';
@@ -40,11 +46,10 @@ export default function NewBookingScreen() {
   const params = useLocalSearchParams<{ sport?: string; court?: string; time?: string; price?: string }>();
   const redeemClaim = useOfferStore((s) => s.redeemClaim);
 
-  const defaultCourt = VENUE_COURTS[0];
-  const sport = (params.sport as SportType) ?? defaultCourt.sport;
-  const court = params.court ?? defaultCourt.name;
-  const unitPrice = params.price ? Number(params.price) : defaultCourt.pricePerSlot;
-  const sportEntry = SPORTS_CATALOG.find((e) => e.sport === sport);
+  const apiEnabled = useBookingsApiEnabled();
+  const courtsQ = useVenueCourts();
+  const createBooking = useCreateVenueBooking();
+  const courts = courtsQ.data ?? [];
 
   const form = useYupForm<typeof newBookingSchema>({
     schema: newBookingSchema,
@@ -54,6 +59,7 @@ export default function NewBookingScreen() {
   const [bookedBy, setBookedBy] = useState<BookedBy>('individual');
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
 
   const [startTime, setStartTime] = useState(() => to24h(params.time) ?? '18:00');
   const [duration, setDuration] = useState(1);
@@ -64,6 +70,22 @@ export default function NewBookingScreen() {
   const [amountPaid, setAmountPaid] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [offer, setOffer] = useState<SubjectOfferEntry | null>(null);
+
+  // Court / sport / price: from the venue's real courts (API) or the mock catalogue.
+  const defaultCourt = VENUE_COURTS[0];
+  const effectiveCourtId =
+    selectedCourtId ?? courts.find((c) => c.name === params.court)?.id ?? courts[0]?.id ?? null;
+  const selectedCourt = courts.find((c) => c.id === effectiveCourtId) ?? null;
+  const sport: SportType =
+    apiEnabled && selectedCourt ? selectedCourt.sportSlug : ((params.sport as SportType) ?? defaultCourt.sport);
+  const court = apiEnabled && selectedCourt ? selectedCourt.name : (params.court ?? defaultCourt.name);
+  const unitPrice =
+    apiEnabled && selectedCourt
+      ? selectedCourt.pricePerHour
+      : params.price
+        ? Number(params.price)
+        : defaultCourt.pricePerSlot;
+  const sportName = useSportBySlug(sport)?.name ?? sport;
 
   // The loyalty subject: an individual by phone, or the selected team.
   const phone = form.watch('phone');
@@ -114,8 +136,41 @@ export default function NewBookingScreen() {
         : `Pending · Rs ${total} due`;
 
   const finish = (who: string) => {
-    // TODO(backend): persist booking + bump loyalty games. A claimed offer is consumed here.
+    // A claimed offer is consumed at booking time (offers are still mock-side).
     if (offer?.claim) redeemClaim(offer.claim.id);
+
+    if (apiEnabled) {
+      if (!effectiveCourtId) {
+        Alert.alert('No court available', 'This venue has no courts set up yet.');
+        return;
+      }
+      createBooking.mutate(
+        {
+          courtId: effectiveCourtId,
+          customerName: who,
+          customerPhone: bookedBy === 'individual' ? phone || undefined : undefined,
+          customerType: bookedBy === 'team' ? 'team' : 'individual',
+          startAt: startIso(startTime),
+          durationMinutes: duration * 60,
+          paymentStatus: isFree ? 'paid' : paymentStatus,
+          amountPaid: isFree ? 0 : paymentStatus === 'partial' ? paid : paymentStatus === 'paid' ? total : 0,
+          freeGame: isFree,
+          discountAmount: isFree ? 0 : discountAmt || undefined,
+          notes: discountReasonLabel || undefined,
+        },
+        {
+          onSuccess: () =>
+            Alert.alert('Booking confirmed', `${who} · ${court} · ${displayTime} · ${totalLabel}`, [
+              { text: 'Done', onPress: () => router.back() },
+            ]),
+          onError: (e) =>
+            Alert.alert('Could not create booking', e instanceof Error ? e.message : 'Please try again.'),
+        },
+      );
+      return;
+    }
+
+    // Mock fallback (offline dev).
     const offerLine = offer ? `\nOffer · ${offer.offer.title}` : '';
     Alert.alert('Booking confirmed', `${who} · ${court} · ${displayTime} · ${totalLabel}\n${paymentLabel}${offerLine}`, [
       { text: 'Done', onPress: () => router.back() },
@@ -144,20 +199,41 @@ export default function NewBookingScreen() {
       }>
       {/* Slot summary */}
       <Card variant="muted" elevation="none" className="mt-md flex-row items-center gap-md">
-        <View className="h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: theme.card }}>
-          <Typography variant="headline-md" style={{ textTransform: 'none' }}>
-            {sportEntry?.emoji ?? '🏟️'}
-          </Typography>
-        </View>
+        <SportGlyph slug={sport} size={48} />
         <View className="flex-1 gap-[2px]">
           <Typography variant="label-lg">
-            {sportEntry?.label ?? sport} · {court}
+            {sportName} · {court}
           </Typography>
           <Typography variant="body-md" color={theme.inkMuted}>
             {displayTime} · Rs {unitPrice}/slot
           </Typography>
         </View>
       </Card>
+
+      {/* Court picker — venue's real courts (live only). */}
+      {apiEnabled && courts.length ? (
+        <View className="gap-sm pt-lg">
+          <Typography variant="label-md" color={theme.inkMuted}>
+            Court
+          </Typography>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {courts.map((c) => {
+              const active = c.id === effectiveCourtId;
+              return (
+                <Pressable
+                  key={c.id}
+                  onPress={() => setSelectedCourtId(c.id)}
+                  className="rounded-full px-md py-sm"
+                  style={{ backgroundColor: active ? theme.primary : theme.cardMuted }}>
+                  <Typography variant="label-md" color={active ? '#ffffff' : undefined}>
+                    {c.name}
+                  </Typography>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
 
       {/* Booked by */}
       <View className="gap-sm pt-lg">
@@ -386,6 +462,14 @@ function to24h(label?: string): string | null {
   if (ap === 'PM' && h < 12) h += 12;
   if (ap === 'AM' && h === 12) h = 0;
   return `${String(h).padStart(2, '0')}:${min}`;
+}
+
+/** "18:00" → an ISO datetime for today at that time (local). */
+function startIso(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m || 0, 0, 0);
+  return d.toISOString();
 }
 
 /** "18:00" → "6:00 PM" for display. */

@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores';
 export default function Index() {
   const theme = useTheme();
   const status = useAuthStore((s) => s.status);
-  const role = useAuthStore((s) => s.profile?.role);
+  const activePanel = useAuthStore((s) => s.activePanel);
 
   if (status === 'loading') {
     return (
@@ -22,10 +22,10 @@ export default function Index() {
   }
 
   if (status === 'onboarding') {
-    // No role yet → role picker; owner → venue setup; player → sport interests.
-    if (!role) return <Redirect href="/role" />;
-    return <Redirect href={role === 'owner' ? '/venue/create' : '/player/sports'} />;
+    // The only onboarding case is an account with no panel chosen → the picker.
+    // Both panels resolve straight to 'authed' otherwise.
+    return <Redirect href="/role" />;
   }
 
-  return <Redirect href={role === 'owner' ? '/(venue)/dashboard' : '/(player)'} />;
+  return <Redirect href={activePanel === 'venue' ? '/(venue)/dashboard' : '/(player)'} />;
 }

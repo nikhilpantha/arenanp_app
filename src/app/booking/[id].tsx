@@ -10,12 +10,14 @@ import {
 } from '@/components/venue/bookings/BookingDetailCards';
 import { CustomerInsights } from '@/components/venue/CustomerInsights';
 import { getCustomerByPhone } from '@/data/customers';
-import { SPORTS_CATALOG } from '@/data/sports';
-import type { SportType } from '@/types';
+import { useSportBySlug } from '@/lib/api/sports';
+import { useBookingsApiEnabled, useSetBookingStatus } from '@/lib/api/venue-bookings';
+import type { BookingStatus } from '@/types';
 
 export default function BookingDetailScreen() {
   const router = useRouter();
   const p = useLocalSearchParams<{
+    id?: string;
     sport?: string;
     court?: string;
     time?: string;
@@ -28,7 +30,10 @@ export default function BookingDetailScreen() {
     freeGame?: string;
   }>();
 
-  const sportEntry = SPORTS_CATALOG.find((e) => e.sport === (p.sport as SportType));
+  const apiEnabled = useBookingsApiEnabled();
+  const setStatusM = useSetBookingStatus();
+
+  const sportName = useSportBySlug(p.sport)?.name ?? p.sport ?? 'Sport';
   const freeGame = p.freeGame === '1';
   const statusMeta = resolveStatusBadge(p.status);
   const payMeta = resolvePaymentBadge(p.payment, freeGame);
@@ -37,6 +42,21 @@ export default function BookingDetailScreen() {
   const customer = p.phone ? getCustomerByPhone(p.phone) : null;
 
   const confirm = (title: string) => Alert.alert(title, undefined, [{ text: 'OK', onPress: () => router.back() }]);
+
+  // Status actions: live mutation when configured, else a confirmation toast (mock).
+  const changeStatus = (status: BookingStatus, mockTitle: string) => {
+    if (apiEnabled && p.id) {
+      setStatusM.mutate(
+        { bookingId: p.id, status },
+        {
+          onSuccess: () => router.back(),
+          onError: (e) => Alert.alert('Action failed', e instanceof Error ? e.message : 'Please try again.'),
+        },
+      );
+    } else {
+      confirm(mockTitle);
+    }
+  };
 
   const facts = [
     { label: 'Date', value: p.date ?? '—' },
@@ -53,8 +73,8 @@ export default function BookingDetailScreen() {
 
       <View className="mt-md gap-md">
         <BookingHero
-          emoji={sportEntry?.emoji ?? '🏟️'}
-          title={`${sportEntry?.label ?? p.sport} · ${p.court}`}
+          sportSlug={p.sport ?? ''}
+          title={`${sportName} · ${p.court}`}
           time={p.time}
           status={statusMeta}
           payment={payMeta}
@@ -70,10 +90,20 @@ export default function BookingDetailScreen() {
       </View>
 
       <View className="gap-sm pt-xl">
-        <Button size="lg" fullWidth className="rounded-full" rightIcon="check" onPress={() => confirm('Marked complete')}>
+        <Button
+          size="lg"
+          fullWidth
+          className="rounded-full"
+          rightIcon="check"
+          loading={setStatusM.isPending}
+          onPress={() => changeStatus('completed', 'Marked complete')}>
           Mark complete
         </Button>
-        <Button variant="ghost" size="lg" fullWidth onPress={() => confirm('Booking cancelled')}>
+        <Button
+          variant="ghost"
+          size="lg"
+          fullWidth
+          onPress={() => changeStatus('cancelled', 'Booking cancelled')}>
           Cancel booking
         </Button>
       </View>

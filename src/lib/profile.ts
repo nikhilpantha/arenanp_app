@@ -1,39 +1,33 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { SportType, UserRole } from '@/types';
+import type { Panel } from '@/types';
 
 /**
- * Local profile stub. The auth provider owns identity; role and onboarding
- * progress live here (per auth user id) until the backend API is ready.
- *
- * TODO(backend): replace these reads/writes with calls to the profile API.
- * The store consumes this module, so screens won't change when the API lands.
+ * Local profile stub. The auth provider owns identity; the panel the account
+ * logged in as is kept here (per auth user id) so routing resolves before the
+ * backend `me` query returns. Capabilities + venue memberships come from `me`.
  */
 export interface LocalProfile {
-  role?: UserRole;
-  venueOnboarded?: boolean;
-  /** Player has completed sport-interest onboarding. */
-  playerOnboarded?: boolean;
-  /** Sports the player is interested in (editable later from profile). */
-  playerSports?: SportType[];
+  /** Panel the account logged in as (player or venue). Drives routing before `me` resolves. */
+  initialPanel?: Panel;
 }
 
 const key = (userId: string) => `profile:${userId}`;
-const PENDING_ROLE_KEY = 'profile:pending-role';
+const PENDING_PANEL_KEY = 'profile:pending-panel';
 
 /**
- * Role chosen before sign-up (no user id yet). Stashed here and adopted into the
+ * Panel chosen before sign-up (no user id yet). Stashed here and adopted into the
  * profile on the first hydrate after the phone is verified.
  */
-export async function setPendingRole(role: UserRole): Promise<void> {
-  await AsyncStorage.setItem(PENDING_ROLE_KEY, role);
+export async function setPendingPanel(panel: Panel): Promise<void> {
+  await AsyncStorage.setItem(PENDING_PANEL_KEY, panel);
 }
 
-/** Read and clear the pending role (one-shot). */
-export async function takePendingRole(): Promise<UserRole | null> {
-  const role = (await AsyncStorage.getItem(PENDING_ROLE_KEY)) as UserRole | null;
-  if (role) await AsyncStorage.removeItem(PENDING_ROLE_KEY);
-  return role;
+/** Read and clear the pending panel (one-shot). */
+export async function takePendingPanel(): Promise<Panel | null> {
+  const panel = (await AsyncStorage.getItem(PENDING_PANEL_KEY)) as Panel | null;
+  if (panel) await AsyncStorage.removeItem(PENDING_PANEL_KEY);
+  return panel;
 }
 
 export async function loadLocalProfile(userId: string): Promise<LocalProfile> {
@@ -52,25 +46,17 @@ async function patchLocalProfile(userId: string, patch: Partial<LocalProfile>): 
   return next;
 }
 
-export function saveRole(userId: string, role: UserRole): Promise<LocalProfile> {
-  return patchLocalProfile(userId, { role });
-}
-
-export function markVenueOnboarded(userId: string): Promise<LocalProfile> {
-  return patchLocalProfile(userId, { venueOnboarded: true });
-}
-
-export function markPlayerOnboarded(userId: string, sports: SportType[]): Promise<LocalProfile> {
-  return patchLocalProfile(userId, { playerOnboarded: true, playerSports: sports });
+/** Persist the panel the account logged in as. */
+export function saveInitialPanel(userId: string, panel: Panel): Promise<LocalProfile> {
+  return patchLocalProfile(userId, { initialPanel: panel });
 }
 
 /**
- * Wipe the local profile for a user (role + onboarding progress).
+ * Wipe the local profile for a user (panel + onboarding progress).
  *
  * Frontend-only/mock behavior: sign-out clears this so a fresh sign-up/in re-enters
- * onboarding instead of skipping it on a stale `venueOnboarded`/`playerOnboarded` flag.
- * TODO(backend): drop this from sign-out once profiles live server-side — signing out
- * must not delete a real account's profile.
+ * onboarding instead of skipping it on a stale flag.
+ * TODO(backend): drop this from sign-out once profiles live server-side.
  */
 export async function clearLocalProfile(userId: string): Promise<void> {
   try {

@@ -1,16 +1,17 @@
 import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { Card, Icon, Screen, ScreenHeader, Typography } from '@/components/common';
+import { Card, Icon, Screen, ScreenHeader, SportGlyph, Typography } from '@/components/common';
 import { SubjectOffers } from '@/components/venue/offers/SubjectOffers';
-import { SPORTS_CATALOG } from '@/data/sports';
 import { getTeam } from '@/data/teams';
 import { useTheme } from '@/hooks/use-theme';
+import { useSports } from '@/lib/api/sports';
 import { computeLoyalty } from '@/lib/loyalty';
 
 export default function TeamDetailScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { data: sportsCatalog } = useSports();
   const { id } = useLocalSearchParams<{ id: string }>();
   const team = getTeam(id ?? '');
 
@@ -86,18 +87,16 @@ export default function TeamDetailScreen() {
             </Typography>
             <Card elevation="sm">
               {team.history.map((g, i) => {
-                const entry = SPORTS_CATALOG.find((e) => e.sport === g.sport);
+                const sportName = sportsCatalog?.find((c) => c.slug === g.sport)?.name ?? g.sport;
                 return (
                   <View
                     key={g.id}
                     className="flex-row items-center gap-md py-sm"
                     style={i < team.history.length - 1 ? { borderBottomWidth: 1, borderColor: theme.border } : undefined}>
-                    <Typography variant="label-md" style={{ textTransform: 'none' }}>
-                      {entry?.emoji ?? '🏟️'}
-                    </Typography>
+                    <SportGlyph slug={g.sport} size={20} />
                     <View className="flex-1">
                       <Typography variant="label-md">
-                        {entry?.label ?? g.sport} · {g.court}
+                        {sportName} · {g.court}
                       </Typography>
                       <Typography variant="body-md" color={theme.inkMuted}>
                         {g.date}

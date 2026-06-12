@@ -7,19 +7,19 @@ import { useRouter } from 'expo-router';
 import { Button, Typography } from '@/components/common';
 import { Colors, Spacing } from '@/constants/theme';
 import { useAuthStore, useRoleStore } from '@/stores';
-import type { UserRole } from '@/types';
+import type { Panel } from '@/types';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const choosePendingRole = useAuthStore((s) => s.choosePendingRole);
+  const choosePendingPanel = useAuthStore((s) => s.choosePendingPanel);
   const setRole = useRoleStore((s) => s.setRole);
 
-  // Role is chosen by which CTA you tap; set the accent context + stash it for the
-  // signup → verify chain, then hand off to the (role-themed) login screen.
-  const start = async (role: UserRole) => {
+  // The panel is chosen by which CTA you tap; set the accent context + stash it for
+  // the signup → verify chain, then hand off to the (panel-themed) login screen.
+  const start = async (role: Panel) => {
     setRole(role);
-    await choosePendingRole(role);
+    await choosePendingPanel(role);
     router.push({ pathname: '/login', params: { role } });
   };
 
@@ -68,8 +68,8 @@ export default function WelcomeScreen() {
               <Typography variant="body-md" color="rgba(255,255,255,0.9)">
                 Do you have a venue?{' '}
               </Typography>
-              <Typography variant="label-lg" color="#ffffff" onPress={() => start('owner')}>
-                Continue as owner
+              <Typography variant="label-lg" color="#ffffff" onPress={() => start('venue')}>
+                Continue as venue
               </Typography>
             </View>
           </View>
