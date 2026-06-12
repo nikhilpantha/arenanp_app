@@ -1,8 +1,8 @@
 import { Pressable, ScrollView } from 'react-native';
 
-import { Typography } from '@/components/common';
-import { SPORTS_CATALOG } from '@/data/sports';
+import { SportGlyph, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
+import { useSports } from '@/lib/api/sports';
 import type { SportType } from '@/types';
 
 export type Scope = SportType | 'all';
@@ -18,33 +18,46 @@ export function SportScope({
   onChange: (scope: Scope) => void;
 }) {
   const theme = useTheme();
-  const options: { key: Scope; emoji: string; label: string }[] = [
-    { key: 'all', emoji: '🏟️', label: 'All' },
-    ...sports.map((s) => {
-      const entry = SPORTS_CATALOG.find((e) => e.sport === s);
-      return { key: s, emoji: entry?.emoji ?? '🏟️', label: entry?.label ?? s };
-    }),
-  ];
+  const { data: catalog } = useSports();
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-      {options.map((o) => {
-        const active = o.key === value;
+      <Pressable
+        key="all"
+        onPress={() => onChange('all')}
+        className="flex-row items-center gap-xs rounded-full px-md py-sm"
+        style={{
+          backgroundColor: value === 'all' ? theme.primary : theme.card,
+          borderWidth: 1,
+          borderColor: value === 'all' ? theme.primary : theme.border,
+        }}>
+        <Typography
+          variant="label-md"
+          color={value === 'all' ? '#ffffff' : theme.ink}
+          style={{ textTransform: 'none' }}>
+          All
+        </Typography>
+      </Pressable>
+
+      {sports.map((s) => {
+        const active = s === value;
+        const name = catalog?.find((c) => c.slug === s)?.name ?? s;
         return (
           <Pressable
-            key={o.key}
-            onPress={() => onChange(o.key)}
+            key={s}
+            onPress={() => onChange(s)}
             className="flex-row items-center gap-xs rounded-full px-md py-sm"
             style={{
               backgroundColor: active ? theme.primary : theme.card,
               borderWidth: 1,
               borderColor: active ? theme.primary : theme.border,
             }}>
-            <Typography variant="label-md" style={{ textTransform: 'none' }}>
-              {o.emoji}
-            </Typography>
-            <Typography variant="label-md" color={active ? '#ffffff' : theme.ink} style={{ textTransform: 'none' }}>
-              {o.label}
+            <SportGlyph slug={s} size={18} />
+            <Typography
+              variant="label-md"
+              color={active ? '#ffffff' : theme.ink}
+              style={{ textTransform: 'none' }}>
+              {name}
             </Typography>
           </Pressable>
         );

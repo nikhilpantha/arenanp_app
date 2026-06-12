@@ -9,8 +9,6 @@ export default function OnboardingLayout() {
         contentStyle: { backgroundColor: 'transparent' },
       }}>
       <Stack.Screen name="role" />
-      <Stack.Screen name="player/sports" />
-      <Stack.Screen name="venue/create" />
     </Stack>
   );
 }

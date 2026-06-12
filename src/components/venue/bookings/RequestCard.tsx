@@ -1,8 +1,8 @@
 import { View } from 'react-native';
 
-import { Button, Card, Typography } from '@/components/common';
-import { SPORTS_CATALOG } from '@/data/sports';
+import { Button, Card, SportGlyph, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
+import { useSportBySlug } from '@/lib/api/sports';
 import type { BookingRequest } from '@/types';
 
 /** A pending online booking with Accept / Decline actions. */
@@ -16,22 +16,16 @@ export function RequestCard({
   onDecline: () => void;
 }) {
   const theme = useTheme();
-  const entry = SPORTS_CATALOG.find((e) => e.sport === request.sport);
+  const sportName = useSportBySlug(request.sport)?.name ?? request.sport;
 
   return (
     <Card elevation="sm" className="gap-md">
       <View className="flex-row items-center gap-md">
-        <View
-          className="h-12 w-12 items-center justify-center rounded-2xl"
-          style={{ backgroundColor: theme.cardMuted }}>
-          <Typography variant="headline-md" style={{ textTransform: 'none' }}>
-            {entry?.emoji ?? '🏟️'}
-          </Typography>
-        </View>
+        <SportGlyph slug={request.sport} size={48} />
         <View className="flex-1 gap-[2px]">
           <Typography variant="label-lg">{request.customerName}</Typography>
           <Typography variant="body-md" color={theme.inkMuted}>
-            {entry?.label ?? request.sport} · {request.court}
+            {sportName} · {request.court}
           </Typography>
         </View>
         <Typography variant="label-sm" color={theme.inkMuted} style={{ textTransform: 'none' }}>

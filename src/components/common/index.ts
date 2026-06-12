@@ -36,6 +36,8 @@ export type { SectionHeaderProps } from './SectionHeader';
 export { SectionHeader } from './SectionHeader';
 export type { SegmentedOption, SegmentedProps } from './Segmented';
 export { Segmented } from './Segmented';
+export type { SportGlyphProps } from './SportGlyph';
+export { SportGlyph } from './SportGlyph';
 export type { StepProgressProps } from './StepProgress';
 export { StepProgress } from './StepProgress';
 export type { TimeSelectProps } from './TimeSelect';

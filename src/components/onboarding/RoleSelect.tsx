@@ -2,23 +2,23 @@ import { View } from 'react-native';
 
 import { Card, Icon, type IconName, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
-import type { UserRole } from '@/types';
+import type { Panel } from '@/types';
 
 interface RoleOption {
-  role: UserRole;
+  role: Panel;
   title: string;
   subtitle: string;
   icon: IconName;
 }
 
 export interface RoleSelectProps {
-  value: UserRole | null;
-  onChange: (role: UserRole) => void;
+  value: Panel | null;
+  onChange: (role: Panel) => void;
 }
 
 const ROLES: RoleOption[] = [
   { role: 'player', title: 'Player', subtitle: 'Book & play sports', icon: 'trophy' },
-  { role: 'owner', title: 'Venue Owner', subtitle: 'Manage your venue', icon: 'building' },
+  { role: 'venue', title: 'Venue', subtitle: 'Manage your venue', icon: 'building' },
 ];
 
 /** Premium two-card role picker (controlled). The caller owns the Continue CTA. */

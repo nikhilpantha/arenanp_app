@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, FormScreen, ScreenHeader, Typography } from '@/components/common';
 import { FormOtpInput } from '@/components/form';
 import { useTheme } from '@/hooks/use-theme';
+import { getDevOtp } from '@/lib/api/dev-otp';
 import { type VerifyOtpFormValues, verifyOtpSchema } from '@/lib/auth-schemas';
 import { useYupForm } from '@/lib/forms';
 import { useAuthStore } from '@/stores';
@@ -28,6 +29,8 @@ export default function VerifyScreen() {
 
   const [submitting, setSubmitting] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
+  // Dev-only: the stub OTP from the backend, shown so you can sign in without SMS.
+  const [devCode, setDevCode] = useState<string | null>(__DEV__ ? getDevOtp() : null);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -53,6 +56,7 @@ export default function VerifyScreen() {
       await resendOtp({ phone });
       form.reset({ code: '' });
       setCountdown(RESEND_SECONDS);
+      if (__DEV__) setDevCode(getDevOtp());
     } catch (e) {
       form.setError('code', {
         message: e instanceof Error ? e.message : 'Could not resend the code.',
@@ -88,6 +92,16 @@ export default function VerifyScreen() {
           length={CODE_LENGTH}
           onComplete={() => submit()}
         />
+
+        {__DEV__ && devCode ? (
+          <Typography
+            variant="label-md"
+            color={theme.primary}
+            style={{ textAlign: 'center' }}
+            onPress={() => form.setValue('code', devCode)}>
+            Dev code: {devCode} (tap to fill)
+          </Typography>
+        ) : null}
         {errorMsg && (
           <Typography variant="label-md" color={theme.danger} style={{ textAlign: 'center' }}>
             {errorMsg}

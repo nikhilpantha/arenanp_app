@@ -3,7 +3,7 @@ import { Alert, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { Fab, Screen, SectionHeader, Segmented } from '@/components/common';
+import { Fab, Screen, SectionHeader, Segmented, Typography } from '@/components/common';
 import { BookingCard } from '@/components/venue/bookings/BookingCard';
 import { BookingsEmptyState } from '@/components/venue/bookings/BookingsEmptyState';
 import { RecurringCard } from '@/components/venue/bookings/RecurringCard';
@@ -18,7 +18,14 @@ import {
   TODAY_BOOKINGS,
   UPCOMING_BOOKINGS,
 } from '@/data/venue-bookings';
-import type { BookingStatus, RecurringBooking, VenueBooking } from '@/types';
+import { useTheme } from '@/hooks/use-theme';
+import {
+  useBookingsApiEnabled,
+  useSetBookingStatus,
+  useVenueBookings,
+  useVenueBookingSummary,
+} from '@/lib/api/venue-bookings';
+import type { BookingStatus, RecurringBooking, SportType, VenueBooking } from '@/types';
 
 type Tab = 'today' | 'upcoming' | 'recurring';
 
@@ -30,15 +37,34 @@ const TABS: { value: Tab; label: string }[] = [
 
 export default function VenueBookings() {
   const router = useRouter();
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
-  // Clear the tab bar + the floating "New booking" button so the last row stays tappable.
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 88;
+
+  const apiEnabled = useBookingsApiEnabled();
+
+  // Live data (API). Disabled queries return undefined, so the mock fallback applies.
+  const todayQ = useVenueBookings('today');
+  const upcomingQ = useVenueBookings('upcoming');
+  const summaryQ = useVenueBookingSummary();
+  const setStatusM = useSetBookingStatus();
 
   const [tab, setTab] = useState<Tab>('today');
   const [scope, setScope] = useState<Scope>('all');
-  const [today, setToday] = useState<VenueBooking[]>(TODAY_BOOKINGS);
-  const [upcoming, setUpcoming] = useState<VenueBooking[]>(UPCOMING_BOOKINGS);
+  // Mock fallback state (used only when the API isn't configured).
+  const [localToday, setLocalToday] = useState<VenueBooking[]>(TODAY_BOOKINGS);
+  const [localUpcoming, setLocalUpcoming] = useState<VenueBooking[]>(UPCOMING_BOOKINGS);
   const [recurring, setRecurring] = useState<RecurringBooking[]>(RECURRING_BOOKINGS);
+
+  const today = apiEnabled ? (todayQ.data ?? []) : localToday;
+  const upcoming = apiEnabled ? (upcomingQ.data ?? []) : localUpcoming;
+  const loading = apiEnabled && (tab === 'today' ? todayQ.isLoading : upcomingQ.isLoading);
+
+  // Sport filter chips: the union of sports actually present (falls back to the catalog).
+  const presentSports = Array.from(
+    new Set<SportType>([...today, ...upcoming].map((b) => b.sport)),
+  );
+  const sportChips = presentSports.length ? presentSports : BOOKING_SPORTS;
 
   const openDetails = (b: VenueBooking) =>
     router.push({
@@ -58,30 +84,30 @@ export default function VenueBookings() {
       },
     });
 
-  const setStatus = (id: string, status: BookingStatus) =>
-    setToday((list) => list.map((b) => (b.id === id ? { ...b, status } : b)));
+  // Status change: API mutation when live, else local state.
+  const setStatus = (id: string, status: BookingStatus) => {
+    if (apiEnabled) setStatusM.mutate({ bookingId: id, status });
+    else setLocalToday((list) => list.map((b) => (b.id === id ? { ...b, status } : b)));
+  };
 
-  // Today: operational actions update the badge in place.
+  const cancelUpcoming = (id: string) => {
+    if (apiEnabled) setStatusM.mutate({ bookingId: id, status: 'cancelled' });
+    else setLocalUpcoming((list) => list.filter((x) => x.id !== id));
+  };
+
   const manageToday = (b: VenueBooking) =>
     Alert.alert(b.customer, `${b.startLabel} – ${b.endLabel} · ${b.court}`, [
       { text: 'Check in', onPress: () => setStatus(b.id, 'checked-in') },
       { text: 'Mark completed', onPress: () => setStatus(b.id, 'completed') },
       { text: 'Mark no-show', style: 'destructive', onPress: () => setStatus(b.id, 'no-show') },
-      { text: 'Add notes', onPress: () => Alert.alert('Notes', 'Note-taking lands with the bookings API.') },
       { text: 'Close', style: 'cancel' },
     ]);
 
-  // Upcoming: edit / move / contact / cancel.
   const manageUpcoming = (b: VenueBooking) =>
     Alert.alert(b.customer, `${b.date} · ${b.startLabel} – ${b.endLabel}`, [
       { text: 'Edit', onPress: () => openDetails(b) },
-      { text: 'Move slot', onPress: () => Alert.alert('Move slot', 'Slot rescheduling lands with the bookings API.') },
       { text: 'Contact customer', onPress: () => Alert.alert('Contact', b.phone ? `Calling ${b.phone}…` : 'No number on file.') },
-      {
-        text: 'Cancel booking',
-        style: 'destructive',
-        onPress: () => setUpcoming((list) => list.filter((x) => x.id !== b.id)),
-      },
+      { text: 'Cancel booking', style: 'destructive', onPress: () => cancelUpcoming(b.id) },
       { text: 'Close', style: 'cancel' },
     ]);
 
@@ -103,12 +129,17 @@ export default function VenueBookings() {
       <Screen scroll contentContainerStyle={{ paddingBottom: bottomPad }}>
         <VenueHeader title="Bookings" />
         <View className="gap-md pb-md">
-          <SummaryCards />
+          <SummaryCards
+            bookingsToday={summaryQ.data?.bookingsToday}
+            revenueToday={summaryQ.data?.revenueToday}
+            pendingPayments={summaryQ.data?.pendingPayments}
+            freeGamesDue={apiEnabled ? 0 : undefined}
+          />
           <Segmented options={TABS} value={tab} onChange={(v) => setTab(v as Tab)} />
         </View>
 
         <View className="gap-lg pb-xl">
-          {tab !== 'recurring' ? <SportScope sports={BOOKING_SPORTS} value={scope} onChange={setScope} /> : null}
+          {tab !== 'recurring' ? <SportScope sports={sportChips} value={scope} onChange={setScope} /> : null}
 
           {tab === 'recurring' ? (
             <View className="gap-md">
@@ -130,7 +161,11 @@ export default function VenueBookings() {
             </View>
           ) : (
             <View className="gap-sm">
-              {list.length === 0 ? (
+              {loading ? (
+                <Typography variant="body-md" color={theme.inkMuted} style={{ textAlign: 'center', paddingVertical: 24 }}>
+                  Loading bookings…
+                </Typography>
+              ) : list.length === 0 ? (
                 <BookingsEmptyState
                   label={tab === 'today' ? 'No bookings today' : 'No upcoming bookings'}
                   hint="New bookings will show up here."

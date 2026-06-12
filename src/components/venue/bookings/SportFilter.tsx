@@ -1,8 +1,8 @@
 import { Pressable, ScrollView } from 'react-native';
 
-import { Typography } from '@/components/common';
-import { SPORTS_CATALOG } from '@/data/sports';
+import { SportGlyph, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
+import { useSports } from '@/lib/api/sports';
 import type { SportType } from '@/types';
 
 /** Pill row of the sports the venue offers (emoji + label), single-select. */
@@ -16,12 +16,13 @@ export function SportFilter({
   onChange: (sport: SportType) => void;
 }) {
   const theme = useTheme();
+  const { data: catalog } = useSports();
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
       {sports.map((s) => {
-        const entry = SPORTS_CATALOG.find((e) => e.sport === s);
         const active = s === value;
+        const name = catalog?.find((c) => c.slug === s)?.name ?? s;
         return (
           <Pressable
             key={s}
@@ -32,14 +33,12 @@ export function SportFilter({
               borderWidth: 1,
               borderColor: active ? theme.primary : theme.border,
             }}>
-            <Typography variant="label-md" style={{ textTransform: 'none' }}>
-              {entry?.emoji ?? '🏟️'}
-            </Typography>
+            <SportGlyph slug={s} size={18} />
             <Typography
               variant="label-md"
               color={active ? '#ffffff' : theme.ink}
               style={{ textTransform: 'none' }}>
-              {entry?.label ?? s}
+              {name}
             </Typography>
           </Pressable>
         );

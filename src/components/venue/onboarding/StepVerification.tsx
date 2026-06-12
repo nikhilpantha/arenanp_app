@@ -42,22 +42,25 @@ export function StepVerification({ form }: { form: UseFormReturn<VenueFormValues
         variant="cover"
         label="PAN document"
         addLabel="Upload PAN document"
+        category="VENUE_DOCUMENT"
         value={verification?.panDoc}
-        onChange={(uri) => setDoc('panDoc', uri)}
+        onChange={(key) => setDoc('panDoc', key)}
       />
       <PhotoPicker
         variant="cover"
         label="Business registration"
         addLabel="Upload business registration"
+        category="VENUE_DOCUMENT"
         value={verification?.businessRegDoc}
-        onChange={(uri) => setDoc('businessRegDoc', uri)}
+        onChange={(key) => setDoc('businessRegDoc', key)}
       />
       <PhotoPicker
         variant="cover"
         label="Citizenship"
         addLabel="Upload citizenship"
+        category="VENUE_DOCUMENT"
         value={verification?.citizenshipDoc}
-        onChange={(uri) => setDoc('citizenshipDoc', uri)}
+        onChange={(key) => setDoc('citizenshipDoc', key)}
       />
     </View>
   );

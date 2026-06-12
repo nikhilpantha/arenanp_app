@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Button, FormScreen, ScreenHeader, Typography } from '@/components/common';
@@ -11,6 +11,8 @@ import { StepPhotosBasics } from '@/components/venue/onboarding/StepPhotosBasics
 import { StepServicesPricing } from '@/components/venue/onboarding/StepServicesPricing';
 import { StepVerification } from '@/components/venue/onboarding/StepVerification';
 import { useTheme } from '@/hooks/use-theme';
+import { useUpdateVenueProfile } from '@/lib/api/venue';
+import { useBookingsApiEnabled } from '@/lib/api/venue-bookings';
 import { useYupForm } from '@/lib/forms';
 import { VENUE_EDIT_META,type VenueEditSection } from '@/lib/venue-edit';
 import { useVenueStore } from '@/stores';
@@ -41,6 +43,8 @@ export default function VenueEditScreen() {
 
   const venue = useVenueStore((s) => s.venue);
   const updateVenue = useVenueStore((s) => s.updateVenue);
+  const apiEnabled = useBookingsApiEnabled();
+  const updateProfile = useUpdateVenueProfile();
 
   const form = useYupForm<typeof venueSchema>({
     schema: venueSchema,
@@ -54,8 +58,17 @@ export default function VenueEditScreen() {
     // Validate only the fields this section owns, then merge them into the saved venue.
     if (!(await form.trigger(STEP_FIELDS[meta.stepIndex]))) return;
     setBusy(true);
-    updateVenue(form.getValues());
-    router.back();
+    const values = form.getValues();
+    try {
+      // Live: persist profile fields (basics / location / hours / contact / extras).
+      // Sports/courts + verification editing isn't wired to the backend yet.
+      if (apiEnabled) await updateProfile.mutateAsync(values);
+      updateVenue(values);
+      router.back();
+    } catch (e) {
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.');
+      setBusy(false);
+    }
   };
 
   return (

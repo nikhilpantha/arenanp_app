@@ -1,19 +1,19 @@
 import { View } from 'react-native';
 
-import { Badge, Button, Card, Icon, Typography } from '@/components/common';
+import { Badge, Button, Card, Icon, SportGlyph, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
 
 import type { BadgeMeta } from './booking-meta';
 
 /** Sport + court + time, with status/payment badges — the detail screen header card. */
 export function BookingHero({
-  emoji,
+  sportSlug,
   title,
   time,
   status,
   payment,
 }: {
-  emoji: string;
+  sportSlug: string;
   title: string;
   time?: string;
   status: BadgeMeta;
@@ -22,11 +22,7 @@ export function BookingHero({
   const theme = useTheme();
   return (
     <Card elevation="md" className="flex-row items-center gap-md">
-      <View className="h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: theme.cardMuted }}>
-        <Typography variant="headline-md" style={{ textTransform: 'none' }}>
-          {emoji}
-        </Typography>
-      </View>
+      <SportGlyph slug={sportSlug} size={48} />
       <View className="flex-1 gap-[2px]">
         <Typography variant="label-lg">{title}</Typography>
         <Typography variant="body-md" color={theme.inkMuted}>

@@ -60,10 +60,10 @@ export interface VenueDraft {
   verified: boolean; // derived: true once any verification doc is provided
 }
 
-/** A persisted venue row owned by an owner account. */
-export interface OwnerVenue extends VenueDraft {
+/** A persisted venue row, linked to the venue account that operates it. */
+export interface VenueListing extends VenueDraft {
   id: string;
-  ownerId: string;
+  venueUserId: string;
   createdAt: string;
 }
 
@@ -84,40 +84,72 @@ export interface Match {
   awayScore?: number;
 }
 
-export type UserRole = 'player' | 'owner';
+// ── Identity: panels, capabilities, venue memberships ────────────────────────
+// Mirrors the backend's additive model: one account can be a player AND operate
+// a venue AND be venue staff/coach. `Panel` is the app's switchable context.
+
+/** A top-level app experience the user can switch between. */
+export type Panel = 'player' | 'venue';
+
+/** Platform capabilities a user can be verified for (additive). PLAYER is opt-in too. */
+export type CapabilityType = 'PLAYER' | 'VENUE' | 'ORGANIZER' | 'COACH';
+export type CapabilityStatus =
+  | 'NOT_REQUESTED'
+  | 'PENDING_VERIFICATION'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'SUSPENDED';
+
+export interface Capability {
+  type: CapabilityType;
+  status: CapabilityStatus;
+}
+
+/** A user's role within a single venue (venue-scoped RBAC). */
+export type VenueMemberRole = 'OWNER' | 'MANAGER' | 'FRONT_DESK' | 'STAFF' | 'COACH';
+export type MembershipStatus = 'INVITED' | 'ACTIVE' | 'SUSPENDED';
+
+/** Fine-grained venue permissions (effective = role defaults ∪ overrides). */
+export type VenuePermission =
+  | 'venue:edit'
+  | 'bookings:read'
+  | 'bookings:write'
+  | 'calendar:manage'
+  | 'customers:read'
+  | 'offers:manage'
+  | 'memberships:manage'
+  | 'teams:manage'
+  | 'finance:read'
+  | 'finance:payout'
+  | 'staff:manage';
+
+/** A venue the user has a seat in, with their role + effective permissions. */
+export interface VenueMembershipSummary {
+  venueId: string;
+  venueName: string;
+  role: VenueMemberRole;
+  permissions: VenuePermission[];
+  status: MembershipStatus;
+  /** Per-listing moderation status — drives the "Under review" gate. */
+  verificationStatus: CapabilityStatus;
+}
 
 export interface Profile {
   id: string;
-  role?: UserRole; // undefined until the user picks a role after phone verification
   fullName?: string;
   phone?: string;
   avatarUrl?: string;
   email?: string;
-}
-
-export interface Owner {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-}
-
-export interface VenueOwned {
-  id: string;
-  name: string;
-  location: string;
+  /** Platform capabilities (VENUE / ORGANIZER / …). From the `me` query. */
+  capabilities: Capability[];
+  /** Venues the user can operate, with their role + permissions. */
+  venueMemberships: VenueMembershipSummary[];
 }
 
 export type SlotStatus = 'available' | 'walkin' | 'online' | 'subscription' | 'maintenance';
 
-export type SportType =
-  | 'futsal'
-  | 'football'
-  | 'cricket'
-  | 'indoor-cricket'
-  | 'volleyball'
-  | 'basketball'
-  | 'badminton'
-  | 'tennis';
+/** A sport slug from the backend catalogue (dynamic — no longer a fixed union). */
+export type SportType = string;
 export type PaymentMethod = 'cash' | 'card' | 'esewa' | 'khalti';
 export type BookingType = 'walkin' | 'online' | 'subscription';
 export type BlockReason = 'maintenance' | 'private-event' | 'holiday';
