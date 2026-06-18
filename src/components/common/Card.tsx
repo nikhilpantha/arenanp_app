@@ -40,6 +40,7 @@ export function Card({
 
   const content = (
     <View
+      testID={onPress ? undefined : testID}
       className={className}
       style={[
         styles.base,
@@ -63,7 +64,10 @@ export function Card({
     );
   }
 
-  return <View testID={testID}>{content}</View>;
+  // Return the surface directly — no wrapper View. A bare wrapper sizes to its
+  // content and swallows `flex-1`, collapsing cards that are meant to fill their
+  // parent (e.g. a list card, or flex-1 stat cards in a row).
+  return content;
 }
 
 const styles = StyleSheet.create({

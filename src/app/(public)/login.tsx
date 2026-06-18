@@ -1,11 +1,17 @@
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SystemBars } from 'react-native-edge-to-edge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { LoginForm } from '@/components/auth';
-import { Icon, type IconName, Typography } from '@/components/common';
+import {
+  Icon,
+  type IconName,
+  KeyboardAwareScrollView,
+  KeyboardView,
+  Typography,
+} from '@/components/common';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Panel } from '@/types';
@@ -50,15 +56,9 @@ export default function LoginScreen() {
     <View className="flex-1" style={{ backgroundColor: theme.bg }}>
       {/* Light status-bar icons sit over the colored hero. */}
       <SystemBars style="light" />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardView>
         {/* Scrollable so the CTA stays reachable when the keyboard pushes the form up. */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
           {/* Branded hero — role-tinted gradient that bleeds under the status bar and
               curves into the light form surface below. */}
           <LinearGradient
@@ -108,8 +108,8 @@ export default function LoginScreen() {
           <View className="flex-1 px-lg pt-xl gap-lg" style={{ paddingBottom: bottomGap }}>
             <LoginForm role={role} />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </KeyboardView>
     </View>
   );
 }

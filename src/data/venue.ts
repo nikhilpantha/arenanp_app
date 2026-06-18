@@ -16,8 +16,19 @@ export const MOCK_VENUE: VenueFormValues = {
   latitude: 27.6786,
   longitude: 85.3169,
   services: [
-    { sport: 'futsal', features: ['Indoor', 'Floodlights'], courts: 2, slotMinutes: 60, pricePerSlot: 1200 },
-    { sport: 'basketball', features: ['Outdoor'], courts: 1, slotMinutes: 60, pricePerSlot: 900 },
+    {
+      sport: 'futsal',
+      features: ['Indoor', 'Floodlights'],
+      courts: [
+        { name: 'Futsal 1', slotMinutes: 60, pricePerSlot: 1200 },
+        { name: 'Futsal 2', slotMinutes: 60, pricePerSlot: 1200 },
+      ],
+    },
+    {
+      sport: 'basketball',
+      features: ['Outdoor'],
+      courts: [{ slotMinutes: 60, pricePerSlot: 900 }],
+    },
   ],
   additionalServices: [{ name: 'Bib rental', price: 50 }, { name: 'Parking' }],
   openTime: '06:00',

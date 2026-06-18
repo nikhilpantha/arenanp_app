@@ -68,6 +68,7 @@ module.exports = {
         "card-sunken": "#e5e7eb",
         ink: "#0f172a",
         "ink-muted": "#475569",
+        "ink-subtle": "#94a3b8",
         border: "#e2e8f0",
         success: "#10b981",
         danger: "#ba1a1a",

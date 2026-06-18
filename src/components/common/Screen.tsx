@@ -1,10 +1,12 @@
-import { ScrollView, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Platform, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import { type Edge, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Spacing, TAB_BAR_HEIGHT } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { GradientBackground } from './GradientBackground';
+import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
+import { KeyboardView } from './KeyboardView';
 
 export interface ScreenProps {
   children: React.ReactNode;
@@ -46,12 +48,13 @@ export function Screen({
 
   const body = scroll ? (
     <SafeAreaView style={containerStyle} edges={edges} testID={testID}>
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={contentStyle}
-        showsVerticalScrollIndicator={false}>
-        {children}
-      </ScrollView>
+      {/* Keyboard-aware so any inputs inside a scrolling screen stay clear of the keyboard
+          (iOS via content insets, Android via the KeyboardView's padding). */}
+      <KeyboardView>
+        <KeyboardAwareScrollView style={styles.flex} contentContainerStyle={contentStyle}>
+          {children}
+        </KeyboardAwareScrollView>
+      </KeyboardView>
     </SafeAreaView>
   ) : (
     <SafeAreaView style={containerStyle} edges={edges} testID={testID}>
@@ -61,7 +64,22 @@ export function Screen({
 
   if (!gradient) return body;
 
-  return <GradientBackground>{body}</GradientBackground>;
+  return (
+    <GradientBackground>
+      {body}
+      {/* Under edge-to-edge, Android draws content behind the transparent system nav bar.
+          On gradient screens that lets the wash bleed under the nav buttons; fill that
+          inset with a solid surface color so the nav bar reads as a defined bar. We use
+          `card` to match the white native tab bar (`backgroundColor={Colors.light.card}`),
+          so the bottom stays one continuous color. iOS has no such bar — unchanged there. */}
+      {Platform.OS === 'android' && insets.bottom > 0 ? (
+        <View
+          pointerEvents="none"
+          style={[styles.navBar, { height: insets.bottom, backgroundColor: theme.card }]}
+        />
+      ) : null}
+    </GradientBackground>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -69,4 +87,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   transparent: { backgroundColor: 'transparent' },
   padded: { paddingHorizontal: Spacing.page },
+  navBar: { position: 'absolute', left: 0, right: 0, bottom: 0 },
 });

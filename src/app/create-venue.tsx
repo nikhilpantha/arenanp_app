@@ -24,7 +24,7 @@ const STEPS = [
   { title: 'Venue basics', subtitle: 'Cover photo, name and contact details.', scroll: true },
   { title: 'Where is your venue?', subtitle: 'Search or drop a pin so players find you.', scroll: false },
   { title: 'Sports & pricing', subtitle: 'Pick a sport and add at least one court.', scroll: true },
-  { title: 'Operating hours', subtitle: 'When players can book.', scroll: true },
+  { title: 'Hours & extras', subtitle: 'When players can book, plus optional add-on services.', scroll: true },
   { title: 'Verification', subtitle: 'Optional — documents for the Verified badge.', scroll: true },
 ] as const;
 
@@ -73,7 +73,14 @@ export default function CreateVenue() {
     if (busy) return;
     setError(undefined);
     if (step < LAST) {
-      if (await form.trigger(STEP_FIELDS[step])) setStep((s) => s + 1);
+      const fields = STEP_FIELDS[step];
+      if (await form.trigger(fields)) {
+        setStep((s) => s + 1);
+      } else {
+        // Surface the problem: focus the first invalid field so the user lands on it.
+        const firstInvalid = fields.find((name) => form.getFieldState(name).invalid);
+        if (firstInvalid) form.setFocus(firstInvalid);
+      }
       return;
     }
     await finalize();
@@ -90,28 +97,19 @@ export default function CreateVenue() {
     <FormScreen
       scroll={meta.scroll}
       header={
-        <View className="gap-lg">
-          <ScreenHeader
-            onBack={onBack}
-            right={
-              step === LAST ? (
-                <Typography
-                  variant="label-md"
-                  color={theme.primary}
-                  onPress={() => finalize({ skipVerification: true })}>
-                  Skip
-                </Typography>
-              ) : undefined
-            }
-          />
-          <StepProgress current={step + 1} total={STEPS.length} />
-          <View className="gap-sm">
-            <Typography variant="headline-lg">{meta.title}</Typography>
-            <Typography variant="body-md" color={theme.inkMuted}>
-              {meta.subtitle}
-            </Typography>
-          </View>
-        </View>
+        <ScreenHeader
+          onBack={onBack}
+          right={
+            step === LAST ? (
+              <Typography
+                variant="label-md"
+                color={theme.primary}
+                onPress={() => finalize({ skipVerification: true })}>
+                Skip
+              </Typography>
+            ) : undefined
+          }
+        />
       }
       footer={
         <>
@@ -131,11 +129,20 @@ export default function CreateVenue() {
           </Button>
         </>
       }>
-      {step === 0 && <StepPhotosBasics form={form} />}
-      {step === 1 && <StepLocation form={form} />}
-      {step === 2 && <StepServicesPricing form={form} />}
-      {step === 3 && <StepHours form={form} />}
-      {step === 4 && <StepVerification form={form} />}
+      <View className={meta.scroll ? 'gap-lg' : 'flex-1 gap-lg'}>
+        <StepProgress current={step + 1} total={STEPS.length} />
+        <View className="gap-sm">
+          <Typography variant="headline-lg">{meta.title}</Typography>
+          <Typography variant="body-md" color={theme.inkMuted}>
+            {meta.subtitle}
+          </Typography>
+        </View>
+        {step === 0 && <StepPhotosBasics form={form} />}
+        {step === 1 && <StepLocation form={form} />}
+        {step === 2 && <StepServicesPricing form={form} />}
+        {step === 3 && <StepHours form={form} />}
+        {step === 4 && <StepVerification form={form} />}
+      </View>
     </FormScreen>
   );
 }

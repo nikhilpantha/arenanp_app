@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Card, Typography } from '@/components/common';
+import { Card, DateStrip, Typography } from '@/components/common';
 import { getSchedule, VENUE_SPORTS } from '@/data/bookings';
 import { useTheme } from '@/hooks/use-theme';
 import type { SportType } from '@/types';
 
-import { DateStrip } from './DateStrip';
 import { useSlotStatusMeta } from './slot-status';
 import { SlotRow } from './SlotRow';
 import { StatusLegend } from './StatusLegend';

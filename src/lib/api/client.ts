@@ -17,6 +17,14 @@ export const isApiConfigured = API_URL.length > 0;
 
 const client = new GraphQLClient(API_URL);
 
+/**
+ * Max time (ms) to wait for a single GraphQL request before aborting. React
+ * Native's fetch has no default timeout, so without this a stalled connection
+ * (device off the dev LAN, flaky Wi-Fi, a hung resolver) leaves the request
+ * pending forever — which surfaces as a query stuck in `isLoading`.
+ */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 /** Thrown when the server rejects the token (expired / revoked tokenVersion). */
 export class UnauthorizedError extends Error {
   constructor(message = 'Session expired') {
@@ -56,13 +64,25 @@ export async function gqlRequest<T>(
     const token = await loadToken();
     if (token) headers.authorization = `Bearer ${token}`;
   }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    return await client.request<T>(document, variables, headers);
+    return await client.request<T>({
+      document,
+      variables,
+      requestHeaders: headers,
+      signal: controller.signal,
+    });
   } catch (err) {
     if (isUnauthorized(err)) {
       await clearToken();
       throw new UnauthorizedError(messageFrom(err));
     }
+    if (controller.signal.aborted) {
+      throw new Error('Request timed out. Check your connection and try again.');
+    }
     throw new Error(messageFrom(err) ?? 'Network request failed. Please try again.');
+  } finally {
+    clearTimeout(timer);
   }
 }

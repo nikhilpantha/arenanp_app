@@ -16,27 +16,28 @@ function toLocalPhone(phone: string | null | undefined): string {
 
 /** Map the backend venue → the app's `VenueFormValues` (the venue store shape). */
 export function mapApiVenueToForm(v: ApiVenue): VenueFormValues {
-  // Rebuild per-sport "services" by grouping the venue's courts.
-  const bySport = new Map<string, { count: number; slotMinutes: number; pricePerHour: number; features: string[] }>();
+  // Rebuild per-sport "services" by grouping the venue's courts, preserving each
+  // court's name / slot / price (the form works per court).
+  const bySport = new Map<
+    string,
+    { features: string[]; courts: { name?: string; slotMinutes: number; pricePerSlot: number }[] }
+  >();
   for (const c of v.courts) {
     const key = c.sport.slug;
+    const court = {
+      name: c.name || undefined,
+      slotMinutes: c.slotMinutes,
+      // Backend stores per-hour; the form works in per-slot.
+      pricePerSlot: Math.round((c.pricePerHour * c.slotMinutes) / 60),
+    };
     const existing = bySport.get(key);
-    if (existing) existing.count += 1;
-    else
-      bySport.set(key, {
-        count: 1,
-        slotMinutes: c.slotMinutes,
-        pricePerHour: c.pricePerHour,
-        features: c.features ?? [],
-      });
+    if (existing) existing.courts.push(court);
+    else bySport.set(key, { features: c.features ?? [], courts: [court] });
   }
   const services = [...bySport.entries()].map(([slug, s]) => ({
     sport: slug as SportType,
     features: s.features,
-    courts: s.count,
-    slotMinutes: s.slotMinutes,
-    // Backend stores per-hour; the form works in per-slot.
-    pricePerSlot: Math.round((s.pricePerHour * s.slotMinutes) / 60),
+    courts: s.courts,
   }));
 
   return {

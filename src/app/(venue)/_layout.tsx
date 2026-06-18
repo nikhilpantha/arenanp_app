@@ -1,4 +1,5 @@
-import { Icon as TabIcon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Icon as TabIcon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Colors } from '@/constants/theme';
 
@@ -6,12 +7,15 @@ import { Colors } from '@/constants/theme';
 // gate: a freshly-created venue is PENDING (it just won't appear in public
 // listings until a super admin approves it), but the owner always has full
 // dashboard access.
+//
+// One icon set for both platforms: Ionicons via expo-router's `VectorIcon`, passed as the
+// cross-platform `src` (outline when idle, filled when selected) so iOS and Android match.
 const TABS = [
-  { name: 'dashboard', label: 'Dashboard', sf: 'square.grid.2x2.fill', drawable: 'home' },
-  { name: 'bookings', label: 'Bookings', sf: 'calendar', drawable: 'bookings' },
-  { name: 'customers', label: 'Customers', sf: 'person.2.fill', drawable: 'customers' },
-  { name: 'finance', label: 'Finance', sf: 'creditcard.fill', drawable: 'earnings' },
-  { name: 'venues', label: 'Venues', sf: 'building.2.fill', drawable: 'profile' },
+  { name: 'dashboard', label: 'Dashboard', icon: 'grid-outline', active: 'grid' },
+  { name: 'bookings', label: 'Bookings', icon: 'calendar-outline', active: 'calendar' },
+  { name: 'customers', label: 'Customers', icon: 'people-outline', active: 'people' },
+  { name: 'finance', label: 'Finance', icon: 'card-outline', active: 'card' },
+  { name: 'venues', label: 'Venues', icon: 'business-outline', active: 'business' },
 ] as const;
 
 export default function VenueTabsLayout() {
@@ -25,7 +29,12 @@ export default function VenueTabsLayout() {
       {TABS.map((tab) => (
         <NativeTabs.Trigger key={tab.name} name={tab.name}>
           <Label>{tab.label}</Label>
-          <TabIcon sf={tab.sf} drawable={tab.drawable} />
+          <TabIcon
+            src={{
+              default: <VectorIcon family={Ionicons} name={tab.icon} />,
+              selected: <VectorIcon family={Ionicons} name={tab.active} />,
+            }}
+          />
         </NativeTabs.Trigger>
       ))}
     </NativeTabs>

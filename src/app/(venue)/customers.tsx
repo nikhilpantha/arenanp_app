@@ -1,36 +1,60 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Screen, SearchBar } from '@/components/common';
-import { CustomerList } from '@/components/venue/customers/CustomerList';
-import { CustomerStats } from '@/components/venue/customers/CustomerStats';
+import { Card, Screen, SearchBar, Typography } from '@/components/common';
+import { VenueCustomerList } from '@/components/venue/customers/VenueCustomerList';
 import { VenueHeader } from '@/components/venue/VenueHeader';
-import { CUSTOMERS } from '@/data/customers';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useTheme } from '@/hooks/use-theme';
+import { useVenueCustomers } from '@/lib/api/venue-customers';
 
 export default function VenueCustomers() {
+  const theme = useTheme();
   const router = useRouter();
   const [query, setQuery] = useState('');
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return CUSTOMERS;
-    return CUSTOMERS.filter((c) => c.name.toLowerCase().includes(q) || c.phone.includes(q));
-  }, [query]);
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const customersQ = useVenueCustomers(debouncedQuery);
+  const customers = customersQ.data ?? [];
+  const freeGamesDue = customers.filter((c) => c.freeGameReady).length;
 
   return (
-    <Screen scroll tabBarSafe>
+    <Screen tabBarSafe>
       <VenueHeader title="Customers" />
       <View className="gap-md pb-md">
-        <CustomerStats />
+        <View className="flex-row gap-sm">
+          <Stat value={String(customers.length)} label="Customers" theme={theme} />
+          <Stat value={String(freeGamesDue)} label="Free games due" tint={theme.secondaryDark} theme={theme} />
+        </View>
         <SearchBar value={query} onChangeText={setQuery} placeholder="Search by name or phone" />
       </View>
 
-      <CustomerList
-        customers={results}
+      <VenueCustomerList
+        customers={customers}
         query={query}
-        onOpen={(id) => router.push({ pathname: '/customer/[id]', params: { id } })}
+        loading={customersQ.isLoading}
+        error={customersQ.isError}
+        loadingMore={customersQ.isFetchingNextPage}
+        onEndReached={() => {
+          if (customersQ.hasNextPage && !customersQ.isFetchingNextPage) customersQ.fetchNextPage();
+        }}
+        onRetry={() => customersQ.refetch()}
+        onOpen={(c) => router.push({ pathname: '/customer/[id]', params: { id: c.id } })}
       />
     </Screen>
+  );
+}
+
+function Stat({ value, label, tint, theme }: { value: string; label: string; tint?: string; theme: ReturnType<typeof useTheme> }) {
+  return (
+    <Card elevation="sm" className="flex-1 gap-[2px]">
+      <Typography variant="headline-md" color={tint}>
+        {value}
+      </Typography>
+      <Typography variant="label-sm" color={theme.inkMuted}>
+        {label}
+      </Typography>
+    </Card>
   );
 }

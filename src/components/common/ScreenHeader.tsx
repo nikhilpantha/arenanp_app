@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { Shadow } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { Icon, type IconName } from './Icon';
@@ -25,11 +26,20 @@ export function ScreenHeader({ title, onBack, backIcon = 'arrowLeft', right }: S
         {onBack && (
           <Pressable
             onPress={onBack}
-            hitSlop={8}
+            hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Go back"
-            className="h-11 w-11 -ml-2 items-center justify-center">
-            <Icon name={backIcon} size={26} color={theme.ink} />
+            className="h-12 w-12 items-center justify-center rounded-full bg-white border border-tertiary-200"
+            style={({ pressed }) => [
+              {
+                backgroundColor: theme.card,
+                borderWidth: 1,
+                borderColor: theme.border,
+                ...Shadow.sm,
+              },
+              pressed && { opacity: 0.6 },
+            ]}>
+            <Icon name={backIcon} size={22} color={theme.ink} />
           </Pressable>
         )}
       </View>

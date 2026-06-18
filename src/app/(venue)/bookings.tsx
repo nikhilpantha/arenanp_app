@@ -1,39 +1,54 @@
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { Fab, Screen, SectionHeader, Segmented, Typography } from '@/components/common';
+import { Button, Fab, Icon, Modal, Screen, Segmented, Typography } from '@/components/common';
 import { BookingCard } from '@/components/venue/bookings/BookingCard';
 import { BookingsEmptyState } from '@/components/venue/bookings/BookingsEmptyState';
-import { RecurringCard } from '@/components/venue/bookings/RecurringCard';
+import { RequestCard } from '@/components/venue/bookings/RequestCard';
 import { type Scope, SportScope } from '@/components/venue/bookings/SportScope';
+import { SubscriptionsTab } from '@/components/venue/bookings/SubscriptionsTab';
 import { SummaryCards } from '@/components/venue/bookings/SummaryCards';
 import { VenueHeader } from '@/components/venue/VenueHeader';
+import { TAB, type Tab } from '@/constants/bookings';
 import { TAB_BAR_HEIGHT } from '@/constants/theme';
-import {
-  BOOKING_SPORTS,
-  bySport,
-  RECURRING_BOOKINGS,
-  TODAY_BOOKINGS,
-  UPCOMING_BOOKINGS,
-} from '@/data/venue-bookings';
+import { BOOKING_SPORTS, bySport } from '@/data/venue-bookings';
 import { useTheme } from '@/hooks/use-theme';
+import { useVenueSubscriptions } from '@/lib/api/subscriptions';
 import {
+  useAcceptBookingRequest,
+  useActiveVenueId,
+  useBookingRequests,
   useBookingsApiEnabled,
-  useSetBookingStatus,
+  useDeclineBookingRequest,
   useVenueBookings,
   useVenueBookingSummary,
+  useVenueCourts,
 } from '@/lib/api/venue-bookings';
-import type { BookingStatus, RecurringBooking, SportType, VenueBooking } from '@/types';
-
-type Tab = 'today' | 'upcoming' | 'recurring';
+import { subscriptionOccursOn, subscriptionToSession } from '@/lib/subscription-format';
+import { labelToMinutes } from '@/lib/time';
+import type { SportType, VenueBooking } from '@/types';
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'recurring', label: 'Recurring' },
+  { value: TAB.today, label: 'Today' },
+  { value: TAB.upcoming, label: 'Tomorrow' },
+  { value: TAB.requests, label: 'Requests' },
+  { value: TAB.recurring, label: 'Memberships' },
 ];
+
+/** Local-time "YYYY-MM-DD" for today + an offset in days (venue-local, not UTC). */
+function isoDay(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Merge real bookings with virtual subscription sessions, sorted by start time. */
+function byStart(a: VenueBooking, b: VenueBooking): number {
+  return (labelToMinutes(a.startLabel) ?? 0) - (labelToMinutes(b.startLabel) ?? 0);
+}
 
 export default function VenueBookings() {
   const router = useRouter();
@@ -42,29 +57,55 @@ export default function VenueBookings() {
   const bottomPad = insets.bottom + TAB_BAR_HEIGHT + 88;
 
   const apiEnabled = useBookingsApiEnabled();
+  const venueId = useActiveVenueId();
+  const hasVenue = !!venueId;
 
-  // Live data (API). Disabled queries return undefined, so the mock fallback applies.
+  // Live data from the API. When there's no venue (or no bookings) the queries
+  // resolve empty, so the empty state shows — no mock fallback.
   const todayQ = useVenueBookings('today');
   const upcomingQ = useVenueBookings('upcoming');
   const summaryQ = useVenueBookingSummary();
-  const setStatusM = useSetBookingStatus();
+  const requestsQ = useBookingRequests();
+  const acceptM = useAcceptBookingRequest();
+  const declineM = useDeclineBookingRequest();
 
-  const [tab, setTab] = useState<Tab>('today');
+  const [tab, setTab] = useState<Tab>(TAB.today);
   const [scope, setScope] = useState<Scope>('all');
-  // Mock fallback state (used only when the API isn't configured).
-  const [localToday, setLocalToday] = useState<VenueBooking[]>(TODAY_BOOKINGS);
-  const [localUpcoming, setLocalUpcoming] = useState<VenueBooking[]>(UPCOMING_BOOKINGS);
-  const [recurring, setRecurring] = useState<RecurringBooking[]>(RECURRING_BOOKINGS);
+  const [noVenueModal, setNoVenueModal] = useState(false);
 
-  const today = apiEnabled ? (todayQ.data ?? []) : localToday;
-  const upcoming = apiEnabled ? (upcomingQ.data ?? []) : localUpcoming;
-  const loading = apiEnabled && (tab === 'today' ? todayQ.isLoading : upcomingQ.isLoading);
+  const subsQ = useVenueSubscriptions();
 
-  // Sport filter chips: the union of sports actually present (falls back to the catalog).
-  const presentSports = Array.from(
-    new Set<SportType>([...today, ...upcoming].map((b) => b.sport)),
-  );
-  const sportChips = presentSports.length ? presentSports : BOOKING_SPORTS;
+  const todayIso = isoDay(0);
+  const tomorrowIso = isoDay(1);
+  const subs = subsQ.data ?? [];
+
+  // Each day's list = real bookings on that day + virtual subscription sessions for it.
+  const sessionsFor = (dateIso: string): VenueBooking[] =>
+    subs.filter((s) => subscriptionOccursOn(s, dateIso)).map((s) => subscriptionToSession(s, dateIso));
+
+  const today = [...(todayQ.data ?? []), ...sessionsFor(todayIso)].sort(byStart);
+  // "Tomorrow" tab: backend's upcoming scope returns tomorrow-onward, so filter to tomorrow.
+  const upcoming = [
+    ...(upcomingQ.data ?? []).filter((b) => b.date === tomorrowIso),
+    ...sessionsFor(tomorrowIso),
+  ].sort(byStart);
+  const requests = requestsQ.data ?? [];
+  const loading = tab === TAB.today ? todayQ.isLoading : upcomingQ.isLoading;
+
+  // Sport filter chips come from the sports the venue offers (its courts). Falls back
+  // to the sports present in the current bookings, then the catalog.
+  const courtsQ = useVenueCourts();
+  const venueSports = Array.from(new Set<SportType>((courtsQ.data ?? []).map((c) => c.sportSlug)));
+  const presentSports = Array.from(new Set<SportType>([...today, ...upcoming].map((b) => b.sport)));
+  const sportChips = venueSports.length
+    ? venueSports
+    : presentSports.length
+      ? presentSports
+      : BOOKING_SPORTS;
+
+  // A single-sport venue has nothing to filter: hide the row and pin the scope to it.
+  const onlySport = sportChips.length === 1 ? sportChips[0] : null;
+  const effectiveScope: Scope = onlySport ?? scope;
 
   const openDetails = (b: VenueBooking) =>
     router.push({
@@ -84,45 +125,17 @@ export default function VenueBookings() {
       },
     });
 
-  // Status change: API mutation when live, else local state.
-  const setStatus = (id: string, status: BookingStatus) => {
-    if (apiEnabled) setStatusM.mutate({ bookingId: id, status });
-    else setLocalToday((list) => list.map((b) => (b.id === id ? { ...b, status } : b)));
+  // A membership session opens the member's program detail; a real booking opens its detail.
+  const openCard = (b: VenueBooking) => {
+    if (b.isSubscription && b.subscriptionId) {
+      router.push({ pathname: '/member/[id]', params: { id: b.subscriptionId } });
+    } else {
+      openDetails(b);
+    }
   };
 
-  const cancelUpcoming = (id: string) => {
-    if (apiEnabled) setStatusM.mutate({ bookingId: id, status: 'cancelled' });
-    else setLocalUpcoming((list) => list.filter((x) => x.id !== id));
-  };
-
-  const manageToday = (b: VenueBooking) =>
-    Alert.alert(b.customer, `${b.startLabel} – ${b.endLabel} · ${b.court}`, [
-      { text: 'Check in', onPress: () => setStatus(b.id, 'checked-in') },
-      { text: 'Mark completed', onPress: () => setStatus(b.id, 'completed') },
-      { text: 'Mark no-show', style: 'destructive', onPress: () => setStatus(b.id, 'no-show') },
-      { text: 'Close', style: 'cancel' },
-    ]);
-
-  const manageUpcoming = (b: VenueBooking) =>
-    Alert.alert(b.customer, `${b.date} · ${b.startLabel} – ${b.endLabel}`, [
-      { text: 'Edit', onPress: () => openDetails(b) },
-      { text: 'Contact customer', onPress: () => Alert.alert('Contact', b.phone ? `Calling ${b.phone}…` : 'No number on file.') },
-      { text: 'Cancel booking', style: 'destructive', onPress: () => cancelUpcoming(b.id) },
-      { text: 'Close', style: 'cancel' },
-    ]);
-
-  const togglePause = (id: string) =>
-    setRecurring((list) =>
-      list.map((r) => (r.id === id ? { ...r, status: r.status === 'paused' ? 'active' : 'paused' } : r)),
-    );
-
-  const cancelRecurring = (b: RecurringBooking) =>
-    Alert.alert('Cancel subscription?', `${b.customer} · ${b.packageName}`, [
-      { text: 'Keep', style: 'cancel' },
-      { text: 'Cancel', style: 'destructive', onPress: () => setRecurring((list) => list.filter((x) => x.id !== b.id)) },
-    ]);
-
-  const list = tab === 'today' ? bySport(today, scope) : bySport(upcoming, scope);
+  const list =
+    tab === TAB.today ? bySport(today, effectiveScope) : bySport(upcoming, effectiveScope);
 
   return (
     <View style={{ flex: 1 }}>
@@ -139,44 +152,58 @@ export default function VenueBookings() {
         </View>
 
         <View className="gap-lg pb-xl">
-          {tab !== 'recurring' ? <SportScope sports={sportChips} value={scope} onChange={setScope} /> : null}
+          {(tab === TAB.today || tab === TAB.upcoming) && sportChips.length > 1 ? (
+            <SportScope sports={sportChips} value={scope} onChange={setScope} />
+          ) : null}
 
-          {tab === 'recurring' ? (
+          {tab === TAB.requests ? (
             <View className="gap-md">
-              <SectionHeader
-                title="Subscriptions"
-                subtitle="Recurring slots held by members"
-                actionLabel="Manage plans"
-                onActionPress={() => router.push('/memberships')}
-              />
-              {bySport(recurring, scope).map((r) => (
-                <RecurringCard
-                  key={r.id}
-                  booking={r}
-                  onPause={() => togglePause(r.id)}
-                  onRenew={() => Alert.alert('Renewed', `${r.customer}'s ${r.packageName} renewed.`)}
-                  onCancel={() => cancelRecurring(r)}
+              {apiEnabled && requestsQ.isLoading ? (
+                <Typography
+                  variant="body-md"
+                  color={theme.inkMuted}
+                  style={{ textAlign: 'center', paddingVertical: 24 }}>
+                  Loading requests…
+                </Typography>
+              ) : requests.length === 0 ? (
+                <BookingsEmptyState
+                  label="No pending requests"
+                  hint="Online booking requests will show up here to accept or decline."
                 />
-              ))}
+              ) : (
+                requests.map((req) => (
+                  <RequestCard
+                    key={req.id}
+                    request={req}
+                    onAccept={() => acceptM.mutate(req.id)}
+                    onDecline={() => declineM.mutate({ bookingId: req.id })}
+                  />
+                ))
+              )}
             </View>
+          ) : tab === TAB.recurring ? (
+            <SubscriptionsTab scope={scope} onManagePlans={() => router.push('/memberships')} />
           ) : (
             <View className="gap-sm">
               {loading ? (
-                <Typography variant="body-md" color={theme.inkMuted} style={{ textAlign: 'center', paddingVertical: 24 }}>
+                <Typography
+                  variant="body-md"
+                  color={theme.inkMuted}
+                  style={{ textAlign: 'center', paddingVertical: 24 }}>
                   Loading bookings…
                 </Typography>
               ) : list.length === 0 ? (
                 <BookingsEmptyState
-                  label={tab === 'today' ? 'No bookings today' : 'No upcoming bookings'}
-                  hint="New bookings will show up here."
+                  label={tab === TAB.today ? 'No bookings today' : 'No bookings tomorrow'}
+                  hint="Bookings and member sessions for the day show up here."
                 />
               ) : (
                 list.map((b) => (
                   <BookingCard
                     key={b.id}
                     booking={b}
-                    onPress={() => openDetails(b)}
-                    onManage={() => (tab === 'today' ? manageToday(b) : manageUpcoming(b))}
+                    onPress={() => openCard(b)}
+                    onManage={() => openDetails(b)}
                   />
                 ))
               )}
@@ -185,7 +212,47 @@ export default function VenueBookings() {
         </View>
       </Screen>
 
-      <Fab label="New booking" onPress={() => router.push('/new-booking')} accessibilityLabel="New booking" />
+      {/* The Memberships tab manages recurring slots, so its primary action creates one. */}
+      <Fab
+        label={tab === TAB.recurring ? 'New membership' : 'New booking'}
+        onPress={() => {
+          if (!hasVenue) return setNoVenueModal(true);
+          router.push(tab === TAB.recurring ? '/membership/book' : '/new-booking');
+        }}
+        accessibilityLabel={tab === TAB.recurring ? 'New membership' : 'New booking'}
+      />
+
+      <Modal visible={noVenueModal} onClose={() => setNoVenueModal(false)}>
+        <View className="items-center gap-md">
+          <View
+            className="h-14 w-14 items-center justify-center rounded-full"
+            style={{ backgroundColor: `${theme.primary}1A` }}>
+            <Icon name="mapPin" size={26} color={theme.primary} />
+          </View>
+          <Typography variant="headline-md" style={{ textAlign: 'center' }}>
+            Add a venue first
+          </Typography>
+          <Typography variant="body-md" color={theme.inkMuted} style={{ textAlign: 'center' }}>
+            You need a venue before you can take bookings. Create your venue to start accepting
+            bookings.
+          </Typography>
+          <View className="w-full gap-sm pt-sm">
+            <Button
+              size="lg"
+              fullWidth
+              leftIcon="plus"
+              onPress={() => {
+                setNoVenueModal(false);
+                router.push('/create-venue');
+              }}>
+              Add venue
+            </Button>
+            <Button variant="ghost" size="md" fullWidth onPress={() => setNoVenueModal(false)}>
+              Not now
+            </Button>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

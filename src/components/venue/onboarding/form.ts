@@ -7,10 +7,9 @@ import type { SportType, VenueDraft } from '@/types';
 const numberFromInput = (_value: unknown, original: unknown) =>
   original === '' || original == null ? undefined : Number(original);
 
-const serviceSchema = yup.object({
-  sport: yup.mixed<SportType>().required(),
-  features: yup.array().of(yup.string().required()).default([]),
-  courts: yup.number().min(1).default(1).required(),
+const courtSchema = yup.object({
+  // Optional name; the backend defaults it to the sport name (+ index) when blank.
+  name: yup.string().optional(),
   slotMinutes: yup.number().min(15).default(60).required(),
   // Optional-typed so the input can be empty while editing; the test enforces a value.
   pricePerSlot: yup
@@ -19,6 +18,12 @@ const serviceSchema = yup.object({
     .typeError('Enter a price')
     .optional()
     .test('price', 'Enter a price', (v) => typeof v === 'number' && v >= 1),
+});
+
+const serviceSchema = yup.object({
+  sport: yup.mixed<SportType>().required(),
+  features: yup.array().of(yup.string().required()).default([]),
+  courts: yup.array().of(courtSchema).min(1, 'Add at least one court').required(),
 });
 
 const additionalServiceSchema = yup.object({
@@ -105,10 +110,12 @@ export function toVenueDraft(v: VenueFormValues): VenueDraft {
     services: (v.services ?? []).map((s) => ({
       sport: s.sport,
       features: s.features ?? [],
-      courts: s.courts,
-      slotMinutes: s.slotMinutes,
-      // Guaranteed present post-validation; coerce for the stricter draft type.
-      pricePerSlot: s.pricePerSlot ?? 0,
+      courts: (s.courts ?? []).map((c) => ({
+        name: c.name?.trim() || undefined,
+        slotMinutes: c.slotMinutes,
+        // Guaranteed present post-validation; coerce for the stricter draft type.
+        pricePerSlot: c.pricePerSlot ?? 0,
+      })),
     })),
     additionalServices: (v.additionalServices ?? []).map((a) => ({ name: a.name, price: a.price })),
     openTime: v.openTime,

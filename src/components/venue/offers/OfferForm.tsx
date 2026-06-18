@@ -2,96 +2,105 @@ import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
 
 import { Button, FormScreen, ScreenHeader, Segmented, Typography } from '@/components/common';
-import { FormInput, FormSportChips, FormTimeSelect } from '@/components/form';
+import { FormInput } from '@/components/form';
 import { useTheme } from '@/hooks/use-theme';
+import type { ApiOfferAudience, ApiOfferDiscountType, ApiOfferTrigger } from '@/lib/api/operations';
+import type { VenueOffer, VenueOfferDraft } from '@/lib/api/venue-offers';
 import { useYupForm } from '@/lib/forms';
 import { type OfferFormValues, offerSchema } from '@/lib/offer-schemas';
-import type { DayOfWeek, Offer, OfferAudience, OfferRewardKind, OfferTriggerKind, SportType } from '@/types';
 
-export type OfferDraft = Omit<Offer, 'id' | 'status'>;
-
-const REWARDS: { value: OfferRewardKind; label: string }[] = [
-  { value: 'free-game', label: 'Free game' },
-  { value: 'percent', label: '% off' },
-  { value: 'flat', label: 'Rs off' },
+const TRIGGERS: { value: ApiOfferTrigger; label: string }[] = [
+  { value: 'EVERY_NTH', label: 'Loyalty' },
+  { value: 'PROMO_CODE', label: 'Promo code' },
 ];
 
-const TRIGGERS: { value: OfferTriggerKind; label: string }[] = [
-  { value: 'every-nth', label: 'Every Nth' },
-  { value: 'happy-hour', label: 'Happy hour' },
-  { value: 'manual', label: 'Manual' },
+const LOYALTY_REWARDS: { value: ApiOfferDiscountType; label: string }[] = [
+  { value: 'FREE_GAME', label: 'Free game' },
+  { value: 'PERCENT', label: '% off' },
+  { value: 'FLAT', label: 'Rs off' },
+];
+const PROMO_REWARDS: { value: ApiOfferDiscountType; label: string }[] = [
+  { value: 'PERCENT', label: '% off' },
+  { value: 'FLAT', label: 'Rs off' },
 ];
 
-const AUDIENCES: { value: OfferAudience; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'individual', label: 'Players' },
-  { value: 'team', label: 'Teams' },
-  { value: 'member', label: 'Members' },
+const AUDIENCES: { value: ApiOfferAudience; label: string }[] = [
+  { value: 'ALL', label: 'Everyone' },
+  { value: 'INDIVIDUAL', label: 'Players' },
+  { value: 'TEAM', label: 'Teams' },
 ];
 
-const DAYS: { value: DayOfWeek; label: string }[] = [
-  { value: 'sun', label: 'S' },
-  { value: 'mon', label: 'M' },
-  { value: 'tue', label: 'T' },
-  { value: 'wed', label: 'W' },
-  { value: 'thu', label: 'T' },
-  { value: 'fri', label: 'F' },
-  { value: 'sat', label: 'S' },
-];
+/** One year from now, so a venue's offer doesn't silently expire. */
+function defaultValidUntil(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString();
+}
 
-/** The offer builder body — shared by the create and edit screens. */
+/** The offer builder body — shared by the create and edit screens (backend model). */
 export function OfferForm({
   title,
   initial,
   submitLabel,
   onSubmit,
   onBack,
+  submitting,
   below,
 }: {
   title: string;
-  initial?: Offer;
+  initial?: VenueOffer;
   submitLabel: string;
-  onSubmit: (draft: OfferDraft) => void;
+  onSubmit: (draft: VenueOfferDraft) => void;
   onBack: () => void;
+  submitting?: boolean;
   below?: ReactNode;
 }) {
-  const theme = useTheme();
+  const [audience, setAudience] = useState<ApiOfferAudience>(initial?.audience ?? 'ALL');
 
   const form = useYupForm<typeof offerSchema>({
     schema: offerSchema,
     defaultValues: {
       title: initial?.title ?? '',
-      reward: initial?.reward ?? 'percent',
-      rewardValue: initial?.rewardValue,
-      trigger: initial?.trigger ?? 'every-nth',
+      description: initial?.description ?? '',
+      trigger: initial?.trigger ?? 'EVERY_NTH',
+      discountType: initial?.discountType ?? 'FREE_GAME',
+      discountValue: initial?.discountValue,
+      maxDiscount: initial?.maxDiscount,
+      code: initial?.code,
       everyGames: initial?.everyGames,
-      startTime: hourToTime(initial?.startHour ?? 6),
-      closeTime: hourToTime(initial?.endHour ?? 10),
-      sports: initial?.sports ?? [],
+      minSubtotal: initial?.minSubtotal ?? 0,
+      usageLimit: initial?.usageLimit,
     },
   });
 
-  const [days, setDays] = useState<DayOfWeek[]>(initial?.days ?? ['sun', 'mon', 'tue', 'wed', 'thu', 'fri']);
-  const [audience, setAudience] = useState<OfferAudience>(initial?.audience ?? 'all');
-
-  const reward = form.watch('reward');
   const trigger = form.watch('trigger');
+  const discountType = form.watch('discountType');
 
-  const toggleDay = (d: DayOfWeek) =>
-    setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
+  const setTrigger = (t: ApiOfferTrigger) => {
+    form.setValue('trigger', t, { shouldValidate: true });
+    // A promo code can't be a free game — fall back to a percentage discount.
+    if (t === 'PROMO_CODE' && form.getValues('discountType') === 'FREE_GAME') {
+      form.setValue('discountType', 'PERCENT', { shouldValidate: true });
+    }
+  };
 
   const submit = form.handleSubmit((v: OfferFormValues) => {
     onSubmit({
       title: v.title,
-      reward: v.reward,
-      rewardValue: v.reward === 'free-game' ? undefined : Number(v.rewardValue),
+      description: v.description || undefined,
       trigger: v.trigger,
-      everyGames: v.trigger === 'every-nth' ? Number(v.everyGames) : undefined,
-      days: v.trigger === 'happy-hour' ? days : undefined,
-      startHour: v.trigger === 'happy-hour' ? timeToHour(v.startTime) : undefined,
-      endHour: v.trigger === 'happy-hour' ? timeToHour(v.closeTime) : undefined,
+      discountType: v.discountType,
+      // FREE_GAME ignores discountValue server-side; send 0 to satisfy the required column.
+      discountValue: v.discountType === 'FREE_GAME' ? 0 : Number(v.discountValue),
+      maxDiscount: v.discountType === 'PERCENT' && v.maxDiscount ? Number(v.maxDiscount) : undefined,
+      minSubtotal: v.trigger === 'PROMO_CODE' ? Number(v.minSubtotal ?? 0) : 0,
+      code: v.trigger === 'PROMO_CODE' ? v.code : undefined,
+      everyGames: v.trigger === 'EVERY_NTH' ? Number(v.everyGames) : undefined,
       audience,
-      sports: v.sports && v.sports.length ? (v.sports as SportType[]) : undefined,
+      usageLimit: v.trigger === 'PROMO_CODE' && v.usageLimit ? Number(v.usageLimit) : undefined,
+      validFrom: initial?.validFrom ?? new Date().toISOString(),
+      validUntil: initial?.validUntil ?? defaultValidUntil(),
+      isActive: initial?.isActive ?? true,
     });
   });
 
@@ -100,7 +109,13 @@ export function OfferForm({
       scroll
       header={<ScreenHeader title={title} onBack={onBack} />}
       footer={
-        <Button size="lg" fullWidth className="rounded-full" rightIcon="check" onPress={submit}>
+        <Button
+          size="lg"
+          fullWidth
+          className="rounded-full"
+          rightIcon="check"
+          loading={submitting}
+          onPress={submit}>
           {submitLabel}
         </Button>
       }>
@@ -115,26 +130,10 @@ export function OfferForm({
         />
       </View>
 
-      {/* Reward */}
-      <Field label="Reward">
-        <Segmented options={REWARDS} value={reward} onChange={(v) => form.setValue('reward', v as OfferRewardKind, { shouldValidate: true })} />
-        {reward !== 'free-game' ? (
-          <FormInput
-            control={form.control}
-            name="rewardValue"
-            label={reward === 'percent' ? 'Percent off' : 'Amount off (NPR)'}
-            placeholder={reward === 'percent' ? 'e.g. 20' : 'e.g. 200'}
-            leftIcon={reward === 'percent' ? 'percent' : 'dollarSign'}
-            keyboardType="number-pad"
-          />
-        ) : null}
-      </Field>
-
       {/* Trigger */}
-      <Field label="When it applies">
-        <Segmented options={TRIGGERS} value={trigger} onChange={(v) => form.setValue('trigger', v as OfferTriggerKind, { shouldValidate: true })} />
-
-        {trigger === 'every-nth' ? (
+      <Field label="Type">
+        <Segmented options={TRIGGERS} value={trigger} onChange={(v) => setTrigger(v as ApiOfferTrigger)} />
+        {trigger === 'EVERY_NTH' ? (
           <FormInput
             control={form.control}
             name="everyGames"
@@ -143,55 +142,72 @@ export function OfferForm({
             leftIcon="repeat"
             keyboardType="number-pad"
           />
-        ) : null}
+        ) : (
+          <FormInput
+            control={form.control}
+            name="code"
+            label="Promo code"
+            placeholder="e.g. WELCOME20"
+            leftIcon="award"
+            autoCapitalize="characters"
+          />
+        )}
+      </Field>
 
-        {trigger === 'happy-hour' ? (
-          <View className="gap-md">
-            <View className="gap-sm">
-              <Typography variant="label-md" color={theme.inkMuted}>
-                Days
-              </Typography>
-              <View className="flex-row gap-xs">
-                {DAYS.map((d, i) => {
-                  const active = days.includes(d.value);
-                  return (
-                    <Button
-                      key={`${d.value}-${i}`}
-                      variant={active ? 'primary' : 'tertiary'}
-                      size="md"
-                      className="flex-1"
-                      onPress={() => toggleDay(d.value)}>
-                      {d.label}
-                    </Button>
-                  );
-                })}
-              </View>
-            </View>
-            <View className="flex-row gap-md">
-              <View className="flex-1">
-                <FormTimeSelect control={form.control} name="startTime" label="From" />
-              </View>
-              <View className="flex-1">
-                <FormTimeSelect control={form.control} name="closeTime" label="To" />
-              </View>
-            </View>
-          </View>
+      {/* Reward */}
+      <Field label="Reward">
+        <Segmented
+          options={trigger === 'EVERY_NTH' ? LOYALTY_REWARDS : PROMO_REWARDS}
+          value={discountType}
+          onChange={(v) => form.setValue('discountType', v as ApiOfferDiscountType, { shouldValidate: true })}
+        />
+        {discountType !== 'FREE_GAME' ? (
+          <FormInput
+            control={form.control}
+            name="discountValue"
+            label={discountType === 'PERCENT' ? 'Percent off' : 'Amount off (NPR)'}
+            placeholder={discountType === 'PERCENT' ? 'e.g. 20' : 'e.g. 200'}
+            leftIcon={discountType === 'PERCENT' ? 'percent' : 'dollarSign'}
+            keyboardType="number-pad"
+          />
         ) : null}
-
-        {trigger === 'manual' ? (
-          <Typography variant="body-md" color={theme.inkMuted}>
-            You&apos;ll grant this offer to a customer or team from their screen.
-          </Typography>
+        {discountType === 'PERCENT' ? (
+          <FormInput
+            control={form.control}
+            name="maxDiscount"
+            label="Max discount (NPR, optional)"
+            placeholder="e.g. 500"
+            leftIcon="dollarSign"
+            keyboardType="number-pad"
+          />
         ) : null}
       </Field>
 
-      {/* Scope */}
+      {/* Promo-only constraints */}
+      {trigger === 'PROMO_CODE' ? (
+        <Field label="Conditions">
+          <FormInput
+            control={form.control}
+            name="minSubtotal"
+            label="Minimum booking subtotal (NPR)"
+            placeholder="0"
+            leftIcon="dollarSign"
+            keyboardType="number-pad"
+          />
+          <FormInput
+            control={form.control}
+            name="usageLimit"
+            label="Total redemptions (optional)"
+            placeholder="Unlimited"
+            leftIcon="repeat"
+            keyboardType="number-pad"
+          />
+        </Field>
+      ) : null}
+
+      {/* Audience */}
       <Field label="Who can use it">
-        <Segmented options={AUDIENCES} value={audience} onChange={(v) => setAudience(v as OfferAudience)} />
-      </Field>
-
-      <Field label="Sports (all if none picked)">
-        <FormSportChips control={form.control} name="sports" />
+        <Segmented options={AUDIENCES} value={audience} onChange={(v) => setAudience(v as ApiOfferAudience)} />
       </Field>
 
       {below}
@@ -210,6 +226,3 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     </View>
   );
 }
-
-const hourToTime = (h: number): string => `${String(h).padStart(2, '0')}:00`;
-const timeToHour = (t: string): number => Number(t.split(':')[0]);

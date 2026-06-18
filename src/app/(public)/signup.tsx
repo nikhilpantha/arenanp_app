@@ -117,7 +117,7 @@ export default function SignupScreen() {
           className="rounded-full"
           loading={submitting}
           onPress={onSubmit}>
-          Send code
+          Sign Up
         </Button>
         <View className="flex-row items-center justify-center pt-sm">
           <Typography variant="body-md" color={theme.inkMuted}>

@@ -41,11 +41,14 @@ async function toSubmitVenueInput(draft: VenueDraft) {
     contactPhone: draft.contactPhone ?? draft.venuePhone,
     services: draft.services.map((s) => ({
       sportSlug: s.sport,
-      courtCount: s.courts,
-      slotMinutes: s.slotMinutes,
-      // Backend stores a per-hour rate; convert the per-slot price (== per-hour for 60-min slots).
-      pricePerHour: Math.round((s.pricePerSlot * 60) / s.slotMinutes),
       features: s.features,
+      // Per-court detail. Backend stores a per-hour rate; convert each court's per-slot
+      // price (== per-hour for 60-min slots).
+      courts: s.courts.map((c) => ({
+        name: c.name,
+        slotMinutes: c.slotMinutes,
+        pricePerHour: Math.round((c.pricePerSlot * 60) / c.slotMinutes),
+      })),
     })),
     additionalServices: draft.additionalServices.map((a) => ({ name: a.name, price: a.price })),
     verification: verification
