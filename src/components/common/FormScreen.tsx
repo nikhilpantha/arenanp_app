@@ -1,8 +1,11 @@
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Spacing } from '@/constants/theme';
+import { useKeyboardHeight } from '@/hooks/use-keyboard';
 
+import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
+import { KeyboardView } from './KeyboardView';
 import { Screen } from './Screen';
 
 export interface FormScreenProps {
@@ -20,41 +23,60 @@ export interface FormScreenProps {
  * Shared scaffolding for auth + onboarding screens (user and venue). Handles the
  * fiddly parts once: top safe area, keyboard avoidance, an optional scrolling body,
  * and a sticky footer lifted clear of the keyboard and the system nav bar.
+ *
+ * Two keyboard strategies, picked by whether there's a pinned `footer`:
+ * • With a footer — we lift it ourselves by the measured keyboard height (deterministic
+ *   gap on every device). The body then shrinks above the footer, so it never overlaps
+ *   the keyboard and needs no extra inset.
+ * • Without a footer (an in-body CTA) — `KeyboardView` + the scroll view's keyboard inset
+ *   keep the CTA reachable.
  */
 export function FormScreen({ children, header, footer, scroll = false }: FormScreenProps) {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   // Guarantee a minimum gap above the nav bar / home indicator even on gesture-nav
   // devices where the bottom inset is tiny.
   const bottomGap = Math.max(insets.bottom, Spacing.md);
+  // When the keyboard is up, float the footer a small gap above it; otherwise clear the
+  // home indicator. (No-op for the footer-less case.)
+  const footerPad = keyboardHeight > 0 ? keyboardHeight + Spacing.md : bottomGap;
+
+  const body = scroll ? (
+    <KeyboardAwareScrollView
+      className="flex-1"
+      // With a footer, the body sits above the lifted footer and never meets the keyboard,
+      // so the scroll view's own keyboard inset would only double up — turn it off.
+      automaticallyAdjustKeyboardInsets={!footer}
+      contentContainerStyle={{
+        paddingVertical: Spacing.md,
+        paddingBottom: footer ? Spacing.md : bottomGap,
+      }}>
+      {children}
+    </KeyboardAwareScrollView>
+  ) : (
+    <View className="flex-1 py-md">{children}</View>
+  );
+
+  const content = (
+    <>
+      {header ? <View className="pt-sm">{header}</View> : null}
+      {body}
+      {footer ? (
+        <View className="gap-sm pt-md" style={{ paddingBottom: footerPad }}>
+          {footer}
+        </View>
+      ) : null}
+    </>
+  );
 
   return (
     <Screen>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        {header ? <View className="pt-sm">{header}</View> : null}
-
-        {scroll ? (
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{
-              paddingVertical: Spacing.md,
-              paddingBottom: footer ? Spacing.md : bottomGap,
-            }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled">
-            {children}
-          </ScrollView>
-        ) : (
-          <View className="flex-1 py-md">{children}</View>
-        )}
-
-        {footer ? (
-          <View className="gap-sm pt-md" style={{ paddingBottom: bottomGap }}>
-            {footer}
-          </View>
-        ) : null}
-      </KeyboardAvoidingView>
+      {footer ? (
+        // Footer is lifted manually by `footerPad`, so no KeyboardAvoidingView here.
+        <View className="flex-1">{content}</View>
+      ) : (
+        <KeyboardView>{content}</KeyboardView>
+      )}
     </Screen>
   );
 }

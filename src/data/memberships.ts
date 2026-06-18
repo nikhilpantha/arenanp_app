@@ -1,4 +1,17 @@
-import type { Member, MembershipStats, MembershipTier } from '@/types';
+import type { Member, MembershipDuration, MembershipStats, MembershipTier } from '@/types';
+
+/**
+ * The membership plan durations a venue can offer, from a 1-week plan up to a year.
+ * `days` is the validity window. Single source for the plan form + labels.
+ */
+export const MEMBERSHIP_DURATIONS: { value: MembershipDuration; label: string; days: number }[] = [
+  { value: 'weekly', label: '1 week', days: 7 },
+  { value: 'fortnightly', label: '2 weeks', days: 14 },
+  { value: 'monthly', label: '1 month', days: 30 },
+  { value: 'quarterly', label: '3 months', days: 90 },
+  { value: 'half-yearly', label: '6 months', days: 180 },
+  { value: 'yearly', label: '1 year', days: 365 },
+];
 
 // TODO(backend): membership tiers, members and stats come from the API.
 export const MEMBERSHIP_TIERS: MembershipTier[] = [
@@ -89,6 +102,8 @@ export function getMember(id: string): Member | null {
 }
 
 export const DURATION_LABEL: Record<MembershipTier['duration'], string> = {
+  weekly: 'week',
+  fortnightly: '2 weeks',
   monthly: 'month',
   quarterly: '3 months',
   'half-yearly': '6 months',

@@ -113,7 +113,8 @@ export function PhotoPicker({
           {uploading ? (
             <View
               className="absolute inset-0 items-center justify-center"
-              style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}>
+              // Android paints expo-image over siblings unless overlays are elevated.
+              style={{ backgroundColor: 'rgba(0,0,0,0.35)', elevation: 4, zIndex: 2 }}>
               <ActivityIndicator color="#ffffff" />
             </View>
           ) : (
@@ -123,7 +124,7 @@ export function PhotoPicker({
               accessibilityRole="button"
               accessibilityLabel="Remove photo"
               className="absolute right-2 top-2 h-7 w-7 items-center justify-center rounded-full"
-              style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+              style={{ backgroundColor: 'rgba(0,0,0,0.55)', elevation: 4, zIndex: 2 }}>
               <Icon name="x" size={15} color="#ffffff" />
             </Pressable>
           )}

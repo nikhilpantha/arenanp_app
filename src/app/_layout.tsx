@@ -17,6 +17,7 @@ import {
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
 
+import { ToastProvider } from '@/components/common';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { queryClient } from '@/lib/api/query-client';
 import { useAuthStore } from '@/stores';
@@ -56,42 +57,40 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Protected guard={status === 'signedOut'}>
-                <Stack.Screen name="(public)" />
-              </Stack.Protected>
-              <Stack.Protected guard={status === 'onboarding'}>
-                <Stack.Screen name="(onboarding)" />
-              </Stack.Protected>
-              <Stack.Protected guard={isAuthed && activePanel === 'player'}>
-                <Stack.Screen name="(player)" />
-              </Stack.Protected>
-              <Stack.Protected guard={isAuthed && activePanel === 'venue'}>
-                <Stack.Screen name="(venue)" />
-              </Stack.Protected>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="create-venue" />
-              <Stack.Screen name="venue-account" />
-              <Stack.Screen name="notifications" />
-              <Stack.Screen name="new-booking" />
-              <Stack.Screen name="booking/[id]" />
-              <Stack.Screen name="customer/[id]" />
-              <Stack.Screen name="venue-calendar" />
-              <Stack.Screen name="venue-edit/[section]" />
-              <Stack.Screen name="memberships" />
-              <Stack.Screen name="offers" />
-              <Stack.Screen name="offer/new" />
-              <Stack.Screen name="offer/[id]" />
-              <Stack.Screen name="membership/new" />
-              <Stack.Screen name="membership/book" />
-              <Stack.Screen name="member/[id]" />
-              <Stack.Screen name="team/new" />
-              <Stack.Screen name="team/[id]" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            {/* App is light-locked: dark icons on BOTH the status bar and the Android
+            <ToastProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Protected guard={status === 'signedOut'}>
+                  <Stack.Screen name="(public)" />
+                </Stack.Protected>
+                <Stack.Protected guard={status === 'onboarding'}>
+                  <Stack.Screen name="(onboarding)" />
+                </Stack.Protected>
+                <Stack.Protected guard={isAuthed && activePanel === 'player'}>
+                  <Stack.Screen name="(player)" />
+                </Stack.Protected>
+                <Stack.Protected guard={isAuthed && activePanel === 'venue'}>
+                  <Stack.Screen name="(venue)" />
+                </Stack.Protected>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="create-venue" />
+                <Stack.Screen name="venue-account" />
+                <Stack.Screen name="notifications" />
+                {/* Venue booking flows (new-booking, booking detail, calendar, memberships)
+                    live in the (venue-booking) group; paths are unchanged. */}
+                <Stack.Screen name="(venue-booking)" />
+                <Stack.Screen name="customer/[id]" />
+                <Stack.Screen name="venue-edit/[section]" />
+                <Stack.Screen name="offers" />
+                <Stack.Screen name="offer/new" />
+                <Stack.Screen name="offer/[id]" />
+                <Stack.Screen name="member/[id]" />
+                <Stack.Screen name="team/[id]" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              {/* App is light-locked: dark icons on BOTH the status bar and the Android
               navigation bar (SystemBars covers both). Onboarding overrides to "light". */}
-            <SystemBars style="dark" />
+              <SystemBars style="dark" />
+            </ToastProvider>
           </ThemeProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>

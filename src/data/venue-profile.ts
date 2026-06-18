@@ -9,16 +9,18 @@ export interface ProfileRowItem {
   /** When set, the row opens the matching venue-edit section. */
   section?: VenueEditSection;
   /** When set, the row navigates straight to this route (takes precedence). */
-  href?: '/offers';
+  href?: '/offers' | '/memberships' | '/closures';
 }
 
 // Mirrors the onboarding steps so each row reuses that step's editor.
 export const MANAGE_ROWS: ProfileRowItem[] = [
   { key: 'basics', title: 'Photos & basics', subtitle: 'Name, description & contact', icon: 'building', section: 'basics' },
   { key: 'location', title: 'Location', subtitle: 'Map pin and address', icon: 'mapPin', section: 'location' },
-  { key: 'services', title: 'Sports & pricing', subtitle: 'Courts, slots, rates & extras', icon: 'activity', section: 'services' },
-  { key: 'hours', title: 'Operating hours', subtitle: 'When players can book', icon: 'clock', section: 'hours' },
+  { key: 'services', title: 'Sports & pricing', subtitle: 'Courts, slots & rates', icon: 'activity', section: 'services' },
+  { key: 'hours', title: 'Hours & extras', subtitle: 'Booking hours & add-on services', icon: 'clock', section: 'hours' },
   { key: 'offers', title: 'Offers & loyalty', subtitle: 'Discounts, happy hours & rewards', icon: 'percent', href: '/offers' },
+  { key: 'memberships', title: 'Memberships', subtitle: 'Plans & subscribed members', icon: 'repeat', href: '/memberships' },
+  { key: 'closures', title: 'Closures & blocks', subtitle: 'Close the venue or block a court', icon: 'calendar', href: '/closures' },
   { key: 'verification', title: 'Verification', subtitle: 'Earn a Verified badge', icon: 'shield', section: 'verification' },
 ];
 

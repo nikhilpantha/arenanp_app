@@ -29,6 +29,19 @@ const RECURRING_META: Record<RecurringStatus, BadgeMeta> = {
 export const statusBadge = (s: BookingStatus): BadgeMeta => STATUS_META[s];
 export const recurringBadge = (s: RecurringStatus): BadgeMeta => RECURRING_META[s];
 
+/** Membership badge — terminal/derived states win; otherwise "Active". */
+export const subscriptionBadge = (
+  status: 'scheduled' | 'active' | 'paused' | 'cancelled' | 'expired',
+  expiringSoon: boolean,
+): BadgeMeta => {
+  if (status === 'scheduled') return { label: 'Upcoming', variant: 'info' };
+  if (status === 'paused') return { label: 'Paused', variant: 'neutral' };
+  if (status === 'expired') return { label: 'Expired', variant: 'danger' };
+  if (status === 'cancelled') return { label: 'Cancelled', variant: 'danger' };
+  if (expiringSoon) return { label: 'Expiring soon', variant: 'warning' };
+  return { label: 'Active', variant: 'success' };
+};
+
 /** The money badge — a free loyalty game wins over the raw payment state. */
 export const paymentBadge = (b: Pick<VenueBooking, 'payment' | 'freeGame'>): BadgeMeta =>
   b.freeGame ? { label: 'Free Game', variant: 'success' } : PAYMENT_META[b.payment];

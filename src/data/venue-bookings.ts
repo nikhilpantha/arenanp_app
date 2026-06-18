@@ -17,9 +17,9 @@ export const UPCOMING_BOOKINGS: VenueBooking[] = [
 ];
 
 export const RECURRING_BOOKINGS: RecurringBooking[] = [
-  { id: 'rb1', customer: 'Dream FC', sport: 'football', court: 'Football Ground', cadence: 'Every Sunday', timeLabel: '6 PM - 7 PM', packageName: 'Monthly Package', status: 'active', remainingSessions: 3, totalSessions: 4, nextSession: 'Jun 8', packageAmount: 12000, renewalDate: 'Jun 30' },
-  { id: 'rb2', customer: 'Thunderbolts FC', sport: 'futsal', court: 'Court 1', cadence: 'Every Mon · Wed', timeLabel: '6 PM - 7 PM', packageName: 'All-Access Monthly', status: 'active', remainingSessions: 5, totalSessions: 8, nextSession: 'Jun 3', packageAmount: 8000, renewalDate: 'Jun 28' },
-  { id: 'rb3', customer: 'Lalitpur Smashers', sport: 'badminton', court: 'Badminton Court', cadence: 'Every Tuesday', timeLabel: '7 PM - 8 PM', packageName: 'Morning Saver', status: 'paused', remainingSessions: 2, totalSessions: 4, nextSession: '—', packageAmount: 4000, renewalDate: 'Jun 20' },
+  { id: 'rb1', customer: 'Dream FC', sport: 'football', court: '1 sport', cadence: 'Weekdays', timeLabel: '6 AM – 7 AM', packageName: 'Morning Saver', status: 'active', sessionLabel: '1 hr', packageAmount: 12000, startDate: 'Jun 1', renewalDate: 'Jun 30' },
+  { id: 'rb2', customer: 'Thunderbolts FC', sport: 'futsal', court: '1 sport', cadence: 'Mon, Wed', timeLabel: '8 PM – 9 PM', packageName: 'All-Access Monthly', status: 'active', sessionLabel: '1 hr', packageAmount: 8000, startDate: 'May 28', renewalDate: 'Jun 28' },
+  { id: 'rb3', customer: 'Lalitpur Smashers', sport: 'badminton', court: '1 sport', cadence: 'Tue, Thu', timeLabel: '7 AM – 8 AM', packageName: 'Morning Saver', status: 'paused', sessionLabel: '1 hr', packageAmount: 4000, startDate: 'May 20', renewalDate: 'Jun 20' },
 ];
 
 /** Top-of-screen overview numbers. TODO(backend): aggregate from the bookings API. */

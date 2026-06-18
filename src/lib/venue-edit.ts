@@ -17,6 +17,6 @@ export const VENUE_EDIT_META: Record<VenueEditSection, VenueEditMeta> = {
   basics: { title: 'Photos & basics', subtitle: 'Name, description and contact details.', stepIndex: 0, scroll: true },
   location: { title: 'Location', subtitle: 'Search or drop a pin so players find you.', stepIndex: 1, scroll: false },
   services: { title: 'Sports & pricing', subtitle: 'What you offer, courts, slots and price.', stepIndex: 2, scroll: true },
-  hours: { title: 'Operating hours', subtitle: 'When players can book.', stepIndex: 3, scroll: true },
+  hours: { title: 'Hours & extras', subtitle: 'When players can book, plus optional add-on services.', stepIndex: 3, scroll: true },
   verification: { title: 'Verification', subtitle: 'Earn a Verified badge.', stepIndex: 4, scroll: true },
 };

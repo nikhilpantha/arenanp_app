@@ -2,18 +2,18 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button, Card, Screen, ScreenHeader, Typography } from '@/components/common';
-import { OffersList } from '@/components/venue/offers/OffersList';
+import { VenueOffersList } from '@/components/venue/offers/VenueOffersList';
 import { useTheme } from '@/hooks/use-theme';
-import { useOfferStore } from '@/stores';
+import { useVenueOffers } from '@/lib/api/venue-offers';
 
 export default function OffersScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const offers = useOfferStore((s) => s.offers);
-  const claims = useOfferStore((s) => s.claims);
+  const offersQ = useVenueOffers();
+  const offers = offersQ.data ?? [];
 
-  const activeCount = offers.filter((o) => o.status === 'active').length;
-  const availableClaims = claims.filter((c) => c.status === 'available').length;
+  const activeCount = offers.filter((o) => o.isActive).length;
+  const loyaltyCount = offers.filter((o) => o.trigger === 'EVERY_NTH').length;
 
   return (
     <Screen scroll>
@@ -23,7 +23,7 @@ export default function OffersScreen() {
 
       <View className="flex-row gap-sm pt-md">
         <Stat value={String(activeCount)} label="Active offers" />
-        <Stat value={String(availableClaims)} label="Claimed, unused" tint={theme.secondaryDark} />
+        <Stat value={String(loyaltyCount)} label="Loyalty rewards" tint={theme.secondaryDark} />
       </View>
 
       <View className="pt-md">
@@ -33,7 +33,11 @@ export default function OffersScreen() {
       </View>
 
       <View className="pt-xl">
-        <OffersList offers={offers} onOpen={(id) => router.push({ pathname: '/offer/[id]', params: { id } })} />
+        <VenueOffersList
+          offers={offers}
+          loading={offersQ.isLoading}
+          onOpen={(id) => router.push({ pathname: '/offer/[id]', params: { id } })}
+        />
       </View>
     </Screen>
   );

@@ -22,6 +22,7 @@ export function FormPhoneInput<TField extends FieldValues>({
   return (
     <PhoneInput
       {...rest}
+      ref={field.ref}
       value={(field.value as string | undefined) ?? ''}
       onChangeText={field.onChange}
       onBlur={field.onBlur}

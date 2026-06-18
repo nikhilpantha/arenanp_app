@@ -22,6 +22,13 @@ This is the Expo React Native client for **ArenaNepalSport / Stadium Pulse** —
 - Common primitives: [src/components/common/](src/components/common/)
   - `Screen`, `GradientBackground`, `Typography`, `Button`, `Card`, `Badge`, `Input`, `SearchBar`,
     `Avatar`, `Icon`, `SectionHeader`, `StepProgress`, `PhoneInput`, `OtpInput`
+  - **Keyboard + scroll:** never hand-roll `KeyboardAvoidingView`/`ScrollView` for vertical
+    content. Use **`KeyboardView`** (the platform-correct `KeyboardAvoidingView` wrapper — pass
+    `hasFooter` when a CTA is pinned at the bottom) + **`KeyboardAwareScrollView`** (the
+    form-friendly `ScrollView`: persists taps, hides the indicator, iOS keyboard insets). `Screen`
+    (when `scroll`) and `FormScreen` already compose both, so most screens get this for free —
+    reach for the primitives directly only for bespoke layouts (e.g. the login hero). Plain
+    `ScrollView` is still correct for **horizontal** pickers (chips, date strips).
   - **`FormScreen`** — shared layout for auth + onboarding (user & venue): top safe area,
     keyboard avoidance, optional scrolling body, and a sticky `footer` lifted clear of the
     keyboard and the system nav bar. Pass `header` / `footer` nodes + `scroll`. Use it for any

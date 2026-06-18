@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import {
   Pressable,
   type StyleProp,
@@ -26,21 +26,24 @@ export interface InputProps extends Omit<TextInputProps, 'style'> {
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-export function Input({
-  label,
-  error,
-  hint,
-  leftIcon,
-  rightIcon,
-  onRightIconPress,
-  containerStyle,
-  onFocus,
-  onBlur,
-  editable = true,
-  secureTextEntry,
-  multiline,
-  ...rest
-}: InputProps) {
+export const Input = forwardRef<TextInput, InputProps>(function Input(
+  {
+    label,
+    error,
+    hint,
+    leftIcon,
+    rightIcon,
+    onRightIconPress,
+    containerStyle,
+    onFocus,
+    onBlur,
+    editable = true,
+    secureTextEntry,
+    multiline,
+    ...rest
+  },
+  ref,
+) {
   const theme = useTheme();
   const { accent } = useAccent();
   const [focused, setFocused] = useState(false);
@@ -77,6 +80,7 @@ export function Input({
           <Icon name={leftIcon} size={20} color={iconColor} style={isMultiline ? styles.iconTop : undefined} />
         )}
         <TextInput
+          ref={ref}
           // Drop the token lineHeight: a lineHeight on TextInput shifts the text down
           // once typing starts (placeholder vs value align differently).
           style={[
@@ -85,7 +89,7 @@ export function Input({
             TypographyStyles['body-md'],
             { color: theme.ink, lineHeight: undefined },
           ]}
-          placeholderTextColor={theme.inkMuted}
+          placeholderTextColor={theme.inkSubtle}
           editable={editable}
           multiline={multiline}
           secureTextEntry={isPassword ? !revealed : secureTextEntry}
@@ -125,7 +129,7 @@ export function Input({
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

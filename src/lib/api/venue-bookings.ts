@@ -2,22 +2,43 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { primaryVenueMembership } from '@/lib/panels';
 import { useActiveVenueStore, useAuthStore } from '@/stores';
-import type { BookingStatus, CustomerType, PaymentStatus, SportType, VenueBooking } from '@/types';
+import type {
+  BookingRequest,
+  BookingStatus,
+  CustomerType,
+  PaymentMethod,
+  PaymentStatus,
+  SportType,
+  VenueBooking,
+} from '@/types';
 
 import { gqlRequest, isApiConfigured } from './client';
 import {
+  ACCEPT_VENUE_BOOKING,
   type ApiBooking,
   type ApiBookingPaymentStatus,
   type ApiBookingStatus,
   type ApiBookingSummary,
   type ApiCourt,
   type ApiCustomerType,
+  COMPLETE_VENUE_BOOKING,
   CREATE_VENUE_BOOKING,
+  DECLINE_VENUE_BOOKING,
   MY_VENUE_COURTS,
   SET_VENUE_BOOKING_STATUS,
+  UPDATE_VENUE_BOOKING,
+  VENUE_BOOKING,
   VENUE_BOOKING_SUMMARY,
   VENUE_BOOKINGS,
 } from './operations';
+
+/** App payment method → backend PaymentProvider enum. */
+const PAYMENT_METHOD_TO_API: Record<PaymentMethod, string> = {
+  cash: 'CASH',
+  esewa: 'ESEWA',
+  khalti: 'KHALTI',
+  card: 'STRIPE',
+};
 
 /**
  * The venue id the panel is currently operating under. Resolves the venue chosen
@@ -84,6 +105,32 @@ export function mapApiBooking(b: ApiBooking): VenueBooking {
     payment: PAYMENT_MAP[b.paymentStatus],
     amount: b.total,
     freeGame: b.freeGame,
+  };
+}
+
+/** "5m ago"-style relative label from an ISO timestamp. */
+function relativeTime(iso: string): string {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+
+/** A pending online booking → the BookingRequest shape the RequestCard renders. */
+export function mapApiBookingToRequest(b: ApiBooking): BookingRequest {
+  return {
+    id: b.id,
+    customerName: b.customerName ?? 'Player',
+    phone: b.customerPhone ?? '',
+    sport: b.sport.slug as SportType,
+    court: b.courtName,
+    time: timeLabel(b.startAt),
+    date: b.startAt.slice(0, 10),
+    durationHours: Math.max(1, Math.round(b.durationMinutes / 60)),
+    price: b.total,
+    requestedAt: relativeTime(b.createdAt),
   };
 }
 
@@ -174,11 +221,14 @@ export interface CreateBookingVars {
   customerName: string;
   customerPhone?: string;
   customerType: CustomerType;
+  customerId?: string;
   startAt: string;
   durationMinutes: number;
   paymentStatus: PaymentStatus;
   amountPaid?: number;
   freeGame?: boolean;
+  /** Redeem the subject's earned loyalty free game (validated server-side). */
+  redeemFreeGame?: boolean;
   discountAmount?: number;
   notes?: string;
 }
@@ -206,11 +256,13 @@ export function useCreateVenueBooking() {
           customerName: vars.customerName,
           customerPhone: vars.customerPhone,
           customerType: CUSTOMER_TYPE_TO_API[vars.customerType],
+          customerId: vars.customerId,
           startAt: vars.startAt,
           durationMinutes: vars.durationMinutes,
           paymentStatus: PAYMENT_TO_API[vars.paymentStatus],
           amountPaid: vars.amountPaid,
           freeGame: vars.freeGame ?? false,
+          redeemFreeGame: vars.redeemFreeGame ?? false,
           discountAmount: vars.discountAmount,
           notes: vars.notes,
         },
@@ -218,6 +270,149 @@ export function useCreateVenueBooking() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['venueBookings', venueId] });
       qc.invalidateQueries({ queryKey: ['venueBookingSummary', venueId] });
+      // The consumed free game / updated tally should refresh for the next booking.
+      qc.invalidateQueries({ queryKey: ['subjectLoyalty', venueId] });
+      qc.invalidateQueries({ queryKey: ['venueCustomers', venueId] });
+      qc.invalidateQueries({ queryKey: ['venueCustomerBookings', venueId] });
     },
+  });
+}
+
+/** A single booking's editable fields, for prefilling the edit form. */
+export interface VenueBookingDetail {
+  id: string;
+  courtId: string;
+  courtName: string;
+  startAt: string;
+  durationMinutes: number;
+  customerName?: string;
+  customerPhone?: string;
+  status: BookingStatus;
+}
+
+export function useVenueBooking(bookingId: string | undefined) {
+  const venueId = useActiveVenueId();
+  return useQuery({
+    queryKey: ['venueBooking', venueId, bookingId],
+    enabled: isApiConfigured && !!venueId && !!bookingId,
+    queryFn: async (): Promise<VenueBookingDetail> => {
+      const r = await gqlRequest<{ venueBooking: ApiBooking }>(VENUE_BOOKING, { venueId, bookingId });
+      const b = r.venueBooking;
+      return {
+        id: b.id,
+        courtId: b.courtId,
+        courtName: b.courtName,
+        startAt: b.startAt,
+        durationMinutes: b.durationMinutes,
+        customerName: b.customerName ?? undefined,
+        customerPhone: b.customerPhone ?? undefined,
+        status: STATUS_MAP[b.status],
+      };
+    },
+  });
+}
+
+export interface UpdateBookingVars {
+  bookingId: string;
+  courtId?: string;
+  startAt?: string;
+  durationMinutes?: number;
+  customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
+}
+
+/** Reschedule / re-assign the customer of a pending booking. */
+export function useUpdateVenueBooking() {
+  const venueId = useActiveVenueId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: UpdateBookingVars) =>
+      gqlRequest(UPDATE_VENUE_BOOKING, { input: { venueId, ...vars } }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['venueBookings', venueId] });
+      qc.invalidateQueries({ queryKey: ['venueBookingSummary', venueId] });
+      qc.invalidateQueries({ queryKey: ['venueBooking', venueId, vars.bookingId] });
+      qc.invalidateQueries({ queryKey: ['venueCustomerBookings', venueId] });
+    },
+  });
+}
+
+export interface CompleteBookingVars {
+  bookingId: string;
+  extras: { name: string; price: number }[];
+  paymentStatus: PaymentStatus;
+  amountPaid?: number;
+  paymentMethod?: PaymentMethod;
+  note?: string;
+}
+
+/** Complete a booking with add-on extras + final payment (recomputes total server-side). */
+export function useCompleteVenueBooking() {
+  const venueId = useActiveVenueId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: CompleteBookingVars) =>
+      gqlRequest(COMPLETE_VENUE_BOOKING, {
+        input: {
+          venueId,
+          bookingId: vars.bookingId,
+          extras: vars.extras.map((e) => ({ name: e.name, price: e.price })),
+          paymentStatus: PAYMENT_TO_API[vars.paymentStatus],
+          amountPaid: vars.amountPaid,
+          paymentMethod: vars.paymentMethod ? PAYMENT_METHOD_TO_API[vars.paymentMethod] : undefined,
+          note: vars.note,
+        },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['venueBookings', venueId] });
+      qc.invalidateQueries({ queryKey: ['venueBookingSummary', venueId] });
+    },
+  });
+}
+
+function invalidateBookings(qc: ReturnType<typeof useQueryClient>, venueId?: string) {
+  qc.invalidateQueries({ queryKey: ['venueBookingRequests', venueId] });
+  qc.invalidateQueries({ queryKey: ['venueBookings', venueId] });
+  qc.invalidateQueries({ queryKey: ['venueBookingSummary', venueId] });
+}
+
+/** Pending online bookings (PENDING_PAYMENT + ONLINE) awaiting accept/decline. */
+export function useBookingRequests() {
+  const venueId = useActiveVenueId();
+  return useQuery({
+    queryKey: ['venueBookingRequests', venueId],
+    enabled: isApiConfigured && !!venueId,
+    queryFn: async (): Promise<BookingRequest[]> => {
+      // No scope → every booking for the venue; keep only the pending online ones.
+      const r = await gqlRequest<{ venueBookings: ApiBooking[] }>(VENUE_BOOKINGS, {
+        input: { venueId },
+      });
+      return r.venueBookings
+        .filter((b) => b.status === 'PENDING_PAYMENT' && b.source === 'ONLINE')
+        .map(mapApiBookingToRequest);
+    },
+  });
+}
+
+export function useAcceptBookingRequest() {
+  const venueId = useActiveVenueId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookingId: string) =>
+      gqlRequest(ACCEPT_VENUE_BOOKING, { input: { venueId, bookingId } }),
+    onSuccess: () => invalidateBookings(qc, venueId),
+  });
+}
+
+export function useDeclineBookingRequest() {
+  const venueId = useActiveVenueId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { bookingId: string; reason?: string }) =>
+      gqlRequest(DECLINE_VENUE_BOOKING, {
+        input: { venueId, bookingId: vars.bookingId, reason: vars.reason },
+      }),
+    onSuccess: () => invalidateBookings(qc, venueId),
   });
 }

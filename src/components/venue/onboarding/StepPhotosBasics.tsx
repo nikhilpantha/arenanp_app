@@ -2,8 +2,8 @@ import type { UseFormReturn } from 'react-hook-form';
 import { View } from 'react-native';
 
 import { FormInput, FormPhoneInput } from '@/components/form';
+import { CoverImageCropper } from '@/components/venue/CoverImageCropper';
 import { PhotoGalleryPicker } from '@/components/venue/PhotoGalleryPicker';
-import { PhotoPicker } from '@/components/venue/PhotoPicker';
 
 import type { VenueFormValues } from './form';
 
@@ -13,10 +13,9 @@ export function StepPhotosBasics({ form }: { form: UseFormReturn<VenueFormValues
 
   return (
     <View className="gap-md">
-      <PhotoPicker
+      <CoverImageCropper
         label="Cover photo"
-        hint="The main image shown on your listing"
-        variant="cover"
+        hint="Landscape 16:9 — the main image shown on your listing"
         category="VENUE_COVER"
         value={coverPhoto}
         onChange={(key) => form.setValue('coverPhoto', key, { shouldValidate: true })}
@@ -24,6 +23,7 @@ export function StepPhotosBasics({ form }: { form: UseFormReturn<VenueFormValues
       <PhotoGalleryPicker
         label="More photos (optional)"
         category="VENUE_IMAGE"
+        max={5}
         value={photos}
         onChange={(keys) => form.setValue('photos', keys, { shouldValidate: true })}
       />

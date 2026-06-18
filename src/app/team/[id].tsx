@@ -8,11 +8,15 @@ import { useTheme } from '@/hooks/use-theme';
 import { useSports } from '@/lib/api/sports';
 import { computeLoyalty } from '@/lib/loyalty';
 
+/**
+ * Team detail (mock-only): roster + history. Reached from the dashboard's "Top teams"
+ * widget, which is still mock data. Venue bookings now use the unified Customer model.
+ */
 export default function TeamDetailScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { data: sportsCatalog } = useSports();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { data: sportsCatalog } = useSports();
   const team = getTeam(id ?? '');
 
   return (
@@ -28,7 +32,6 @@ export default function TeamDetailScreen() {
         </View>
       ) : (
         <>
-          {/* Header + totals */}
           <Card elevation="md" className="mt-md gap-md">
             <View className="flex-row items-center gap-md">
               <View
@@ -49,12 +52,10 @@ export default function TeamDetailScreen() {
             </View>
           </Card>
 
-          {/* Offers the team can use, claim or work towards */}
           <View className="pt-lg">
             <SubjectOffers subjectType="team" subjectId={team.id} games={team.totalGames} />
           </View>
 
-          {/* Roster */}
           <View className="gap-sm pt-lg">
             <Typography variant="label-md" color={theme.inkMuted}>
               Players · loyalty
@@ -80,7 +81,6 @@ export default function TeamDetailScreen() {
             </Card>
           </View>
 
-          {/* History */}
           <View className="gap-sm pt-lg">
             <Typography variant="label-md" color={theme.inkMuted}>
               Game history

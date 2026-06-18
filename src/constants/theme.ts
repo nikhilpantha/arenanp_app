@@ -8,6 +8,7 @@ export const Colors = {
     cardSunken: '#e5e7eb',
     ink: '#0f172a',
     inkMuted: '#475569',
+    inkSubtle: '#94a3b8', // lighter than inkMuted — placeholders, faint hints
     border: '#e2e8f0',
     primary: '#10b981',
     primaryDark: '#047857',
@@ -24,6 +25,7 @@ export const Colors = {
     cardSunken: '#475569',
     ink: '#f8fafc',
     inkMuted: '#cbd5e1',
+    inkSubtle: '#64748b', // lighter than inkMuted — placeholders, faint hints
     border: '#334155',
     primary: '#34d399',
     primaryDark: '#10b981',

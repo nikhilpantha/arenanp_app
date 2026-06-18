@@ -16,13 +16,18 @@ export interface VenueSportConfig {
   pricePerHour: number; // NPR
 }
 
-/** A sport/service offered by a venue, with its courts, slot length and price. */
+/** A single court within a sport offering: its name, slot length and price. */
+export interface CourtDraft {
+  name?: string; // optional; defaults to the sport name (+ index) on the backend
+  slotMinutes: number; // slot length, e.g. 60
+  pricePerSlot: number; // NPR per slot
+}
+
+/** A sport/service offered by a venue, with one or more courts. */
 export interface VenueServiceDraft {
   sport: SportType;
   features: string[];
-  courts: number;
-  slotMinutes: number; // slot length, e.g. 60
-  pricePerSlot: number; // NPR per slot
+  courts: CourtDraft[];
 }
 
 /** An extra amenity/service a venue provides; `price` omitted/0 = free. */
@@ -178,25 +183,28 @@ export interface VenueBooking {
   payment: PaymentStatus;
   amount: number; // NPR; 0 when redeemed as a free loyalty game
   freeGame?: boolean;
+  /** A virtual, read-only session derived from a subscription (not a real booking row). */
+  isSubscription?: boolean;
+  /** The owning subscription's id (set on subscription sessions) — opens the member detail. */
+  subscriptionId?: string;
 }
 
 export type RecurringStatus = 'active' | 'paused' | 'expired';
 
-/** A recurring subscription slot — the venue's monthly-package business. */
+/** A recurring subscription slot — the venue's membership business. */
 export interface RecurringBooking {
   id: string;
   customer: string;
   sport: SportType;
   court: string;
-  cadence: string; // e.g. "Every Sunday"
-  timeLabel: string; // e.g. "6 PM - 7 PM"
-  packageName: string; // e.g. "Monthly Package"
+  cadence: string; // e.g. "Weekdays"
+  timeLabel: string; // the member's daily slot, e.g. "6 AM – 7 AM"
+  packageName: string; // e.g. "Morning Saver"
   status: RecurringStatus;
-  remainingSessions: number;
-  totalSessions: number;
-  nextSession: string; // display, e.g. "Jun 8" (— when paused)
+  sessionLabel: string; // session length, e.g. "1 hr"
   packageAmount: number; // NPR
-  renewalDate: string; // display, e.g. "Jun 30"
+  startDate: string; // display, e.g. "Jun 1"
+  renewalDate: string; // end / expiry, display, e.g. "Jun 30"
 }
 
 export interface Slot {
@@ -372,7 +380,13 @@ export interface ActivityItem {
   timestamp: string;
 }
 
-export type MembershipDuration = 'monthly' | 'quarterly' | 'half-yearly' | 'yearly';
+export type MembershipDuration =
+  | 'weekly'
+  | 'fortnightly'
+  | 'monthly'
+  | 'quarterly'
+  | 'half-yearly'
+  | 'yearly';
 
 export type DayOfWeek = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
 

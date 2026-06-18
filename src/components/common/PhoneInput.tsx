@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { type StyleProp, StyleSheet, TextInput, View, type ViewStyle } from 'react-native';
 
 import { Radius, Shadow, Spacing, TypographyStyles } from '@/constants/theme';
@@ -26,14 +26,10 @@ export function toE164(localDigits: string): string {
   return `${COUNTRY_CODE}${localDigits}`;
 }
 
-export function PhoneInput({
-  value,
-  onChangeText,
-  onBlur,
-  label,
-  error,
-  containerStyle,
-}: PhoneInputProps) {
+export const PhoneInput = forwardRef<TextInput, PhoneInputProps>(function PhoneInput(
+  { value, onChangeText, onBlur, label, error, containerStyle },
+  ref,
+) {
   const theme = useTheme();
   const { accent } = useAccent();
   const [focused, setFocused] = useState(false);
@@ -61,6 +57,7 @@ export function PhoneInput({
           </Typography>
         </View>
         <TextInput
+          ref={ref}
           // Drop the token lineHeight: it shifts TextInput text down once typing starts.
           style={[styles.input, TypographyStyles['body-md'], { color: theme.ink, lineHeight: undefined }]}
           value={value}
@@ -68,7 +65,7 @@ export function PhoneInput({
           keyboardType="number-pad"
           textContentType="telephoneNumber"
           placeholder="98XXXXXXXX"
-          placeholderTextColor={theme.inkMuted}
+          placeholderTextColor={theme.inkSubtle}
           maxLength={LOCAL_LENGTH}
           onFocus={() => setFocused(true)}
           onBlur={() => {
@@ -87,7 +84,7 @@ export function PhoneInput({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.sm },

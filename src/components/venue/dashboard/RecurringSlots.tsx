@@ -13,8 +13,8 @@ export function RecurringSlots() {
   return (
     <View className="gap-md pt-xl">
       <SectionHeader
-        title="Recurring slots"
-        subtitle="Reserved for subscriptions"
+        title="Memberships"
+        subtitle="Recurring slots reserved for members"
         actionLabel="Manage"
         onActionPress={() => router.push('/bookings')}
       />

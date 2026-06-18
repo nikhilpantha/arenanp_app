@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { Icon } from './Icon';
+import { ModalBackdrop } from './ModalBackdrop';
 import { Typography } from './Typography';
 
 export interface TimeSelectProps {
@@ -38,15 +39,17 @@ export function TimeSelect({ label, value, onChange }: TimeSelectProps) {
       <Pressable
         onPress={() => setOpen(true)}
         className="h-14 flex-row items-center justify-between rounded-2xl px-md"
-        style={{ backgroundColor: theme.cardMuted }}>
+        style={[
+          { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border },
+          Shadow.sm,
+        ]}>
         <Typography variant="body-md">{value}</Typography>
         <Icon name="clock" size={18} color={theme.inkMuted} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable
-          onPress={() => setOpen(false)}
-          style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.4)', justifyContent: 'flex-end' }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <ModalBackdrop onPress={() => setOpen(false)} />
           <Pressable
             onPress={(e) => e.stopPropagation()}
             style={{
@@ -83,7 +86,7 @@ export function TimeSelect({ label, value, onChange }: TimeSelectProps) {
               }}
             />
           </Pressable>
-        </Pressable>
+        </View>
       </Modal>
     </View>
   );

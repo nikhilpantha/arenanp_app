@@ -19,6 +19,7 @@ export function BookingCard({
   const theme = useTheme();
   const status = statusBadge(booking.status);
   const pay = paymentBadge(booking);
+  const isSub = booking.isSubscription;
 
   return (
     <Card elevation="sm" onPress={onPress} className="flex-row items-center gap-md">
@@ -50,21 +51,31 @@ export function BookingCard({
           </Typography>
         </View>
         <View className="flex-row flex-wrap gap-xs">
-          <Badge variant={status.variant}>{status.label}</Badge>
-          <Badge variant={pay.variant}>{pay.label}</Badge>
+          {isSub ? (
+            <Badge variant="verified">Membership</Badge>
+          ) : (
+            <>
+              <Badge variant={status.variant}>{status.label}</Badge>
+              <Badge variant={pay.variant}>{pay.label}</Badge>
+            </>
+          )}
         </View>
       </View>
 
-      {/* Manage */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Manage booking for ${booking.customer}`}
-        onPress={onManage}
-        hitSlop={8}
-        className="h-9 w-9 items-center justify-center rounded-full"
-        style={{ backgroundColor: theme.cardMuted }}>
-        <Icon name="settings" size={18} color={theme.ink} />
-      </Pressable>
+      {/* Manage — real bookings only; subscription sessions are read-only here. */}
+      {isSub ? (
+        <Icon name="repeat" size={18} color={theme.inkMuted} />
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Manage booking for ${booking.customer}`}
+          onPress={onManage}
+          hitSlop={8}
+          className="h-9 w-9 items-center justify-center rounded-full"
+          style={{ backgroundColor: theme.cardMuted }}>
+          <Icon name="settings" size={18} color={theme.ink} />
+        </Pressable>
+      )}
     </Card>
   );
 }

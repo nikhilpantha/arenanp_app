@@ -19,10 +19,15 @@ export function FormInput<TField extends FieldValues>({
 }: FormInputProps<TField>) {
   const { field, fieldState } = useController({ control, name });
 
+  // Coerce to a string — RN's TextInput only renders strings, so numeric defaults
+  // (e.g. a prefilled price on an edit form) would otherwise show blank.
+  const value = field.value == null ? '' : String(field.value);
+
   return (
     <Input
       {...rest}
-      value={(field.value as string | undefined) ?? ''}
+      ref={field.ref}
+      value={value}
       onChangeText={field.onChange}
       onBlur={field.onBlur}
       error={fieldState.error?.message}
