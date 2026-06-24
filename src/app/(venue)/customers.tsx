@@ -6,6 +6,7 @@ import { Card, Screen, SearchBar, Typography } from '@/components/common';
 import { VenueCustomerList } from '@/components/venue/customers/VenueCustomerList';
 import { VenueHeader } from '@/components/venue/VenueHeader';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useRefresh } from '@/hooks/use-refresh';
 import { useTheme } from '@/hooks/use-theme';
 import { useVenueCustomers } from '@/lib/api/venue-customers';
 
@@ -16,6 +17,7 @@ export default function VenueCustomers() {
 
   const debouncedQuery = useDebouncedValue(query, 300);
   const customersQ = useVenueCustomers(debouncedQuery);
+  const { refreshing, onRefresh } = useRefresh(customersQ);
   const customers = customersQ.data ?? [];
   const freeGamesDue = customers.filter((c) => c.freeGameReady).length;
 
@@ -40,6 +42,8 @@ export default function VenueCustomers() {
           if (customersQ.hasNextPage && !customersQ.isFetchingNextPage) customersQ.fetchNextPage();
         }}
         onRetry={() => customersQ.refetch()}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         onOpen={(c) => router.push({ pathname: '/customer/[id]', params: { id: c.id } })}
       />
     </Screen>

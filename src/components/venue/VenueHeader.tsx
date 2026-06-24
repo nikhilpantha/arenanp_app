@@ -1,8 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Avatar, Icon, type IconName, Typography } from '@/components/common';
-import { Shadow } from '@/constants/theme';
+import { Avatar, HeaderAction, Icon, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
 
 export interface VenueHeaderProps {
@@ -12,6 +11,8 @@ export interface VenueHeaderProps {
   eyebrow?: string;
   /** When set, an avatar is shown on the left using this name for the fallback. */
   avatarName?: string;
+  /** Resolved (presigned) avatar image URI; falls back to initials when absent. */
+  avatarSrc?: string;
   /** When set, the title becomes a tappable venue switcher (shows a chevron). */
   onTitlePress?: () => void;
   /** When set, the avatar becomes a tappable profile/account button. */
@@ -26,6 +27,7 @@ export function VenueHeader({
   title,
   eyebrow,
   avatarName,
+  avatarSrc,
   onTitlePress,
   onAvatarPress,
 }: VenueHeaderProps) {
@@ -40,10 +42,10 @@ export function VenueHeader({
         {avatarName ? (
           onAvatarPress ? (
             <Pressable onPress={onAvatarPress} accessibilityRole="button" accessibilityLabel="Account">
-              <Avatar fallback={avatarName} size={48} />
+              <Avatar fallback={avatarName} src={avatarSrc} size={48} />
             </Pressable>
           ) : (
-            <Avatar fallback={avatarName} size={48} />
+            <Avatar fallback={avatarName} src={avatarSrc} size={48} />
           )
         ) : null}
         <View className="flex-1 gap-[2px]">
@@ -80,35 +82,5 @@ export function VenueHeader({
         <HeaderAction icon="bell" label="Notifications" showDot onPress={() => router.push('/notifications')} />
       </View>
     </View>
-  );
-}
-
-function HeaderAction({
-  icon,
-  label,
-  onPress,
-  showDot,
-}: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-  showDot?: boolean;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      className="h-11 w-11 items-center justify-center rounded-full"
-      style={[{ backgroundColor: theme.card }, Shadow.sm]}>
-      <Icon name={icon} size={22} color={theme.ink} />
-      {showDot ? (
-        <View
-          className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full"
-          style={{ backgroundColor: theme.danger, borderWidth: 1.5, borderColor: theme.card }}
-        />
-      ) : null}
-    </Pressable>
   );
 }

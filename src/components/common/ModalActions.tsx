@@ -18,6 +18,8 @@ export interface ModalActionsProps {
   /** Red primary button for irreversible actions (cancel, delete…). */
   destructive?: boolean;
   confirmIcon?: IconName;
+  /** Give the cancel button red text + an X icon (instead of a plain outlined cancel). */
+  cancelDestructive?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export function ModalActions({
   confirmDisabled = false,
   destructive = false,
   confirmIcon = 'check',
+  cancelDestructive = false,
 }: ModalActionsProps) {
   const theme = useTheme();
   return (
@@ -54,6 +57,8 @@ export function ModalActions({
         size="lg"
         fullWidth
         className="rounded-full"
+        leftIcon={cancelDestructive ? 'x' : undefined}
+        labelColor={cancelDestructive ? theme.danger : undefined}
         disabled={loading}
         onPress={onCancel}>
         {cancelLabel}

@@ -12,18 +12,31 @@ import type { VenueBooking } from '@/types';
 import { gqlRequest, isApiConfigured } from './client';
 import {
   type ApiBooking,
+  type ApiCustomerKind,
   type ApiLoyaltyStatus,
+  type ApiSubscription,
   type ApiVenueCustomer,
   CREATE_VENUE_CUSTOMER,
   VENUE_CUSTOMER,
   VENUE_CUSTOMER_BOOKINGS,
+  VENUE_CUSTOMER_SUBSCRIPTIONS,
   VENUE_CUSTOMERS,
   VENUE_LOYALTY_STATUS,
 } from './operations';
+import { mapSubscription, type Subscription } from './subscriptions';
 import { mapApiBooking, useActiveVenueId } from './venue-bookings';
 
+/** Party type of a venue customer (INDIVIDUAL person, TEAM, or CLUB). */
+export type CustomerKind = 'individual' | 'team' | 'club';
+
+const KIND_FROM_API: Record<ApiCustomerKind, CustomerKind> = {
+  INDIVIDUAL: 'individual',
+  TEAM: 'team',
+  CLUB: 'club',
+};
+
 /**
- * A venue's customer — a person or a team, one unified record. Persisted in the
+ * A venue's customer — a person, team or club, one unified record. Persisted in the
  * Customer table and keyed by id; loyalty is tracked per customer.
  */
 export interface VenueCustomer {
@@ -31,8 +44,11 @@ export interface VenueCustomer {
   name: string;
   phone?: string;
   notes?: string;
+  kind: CustomerKind;
   gamesPlayed: number;
   freeGameReady: boolean;
+  totalSpent: number;
+  lastVisitAt?: string;
 }
 
 function mapApiCustomer(c: ApiVenueCustomer): VenueCustomer {
@@ -41,8 +57,11 @@ function mapApiCustomer(c: ApiVenueCustomer): VenueCustomer {
     name: c.name,
     phone: c.phone ?? undefined,
     notes: c.notes ?? undefined,
+    kind: KIND_FROM_API[c.kind],
     gamesPlayed: c.gamesPlayed,
     freeGameReady: c.freeGameReady,
+    totalSpent: c.totalSpent,
+    lastVisitAt: c.lastVisitAt ?? undefined,
   };
 }
 
@@ -103,6 +122,22 @@ export function useVenueCustomerBookings(customerId: string | undefined) {
         customerId,
       });
       return r.venueCustomerBookings.map(mapApiBooking);
+    },
+  });
+}
+
+/** A customer's memberships (most recent first) for the unified profile. */
+export function useVenueCustomerSubscriptions(customerId: string | undefined) {
+  const venueId = useActiveVenueId();
+  return useQuery({
+    queryKey: ['venueCustomerSubscriptions', venueId, customerId],
+    enabled: isApiConfigured && !!venueId && !!customerId,
+    queryFn: async (): Promise<Subscription[]> => {
+      const r = await gqlRequest<{ venueCustomerSubscriptions: ApiSubscription[] }>(
+        VENUE_CUSTOMER_SUBSCRIPTIONS,
+        { venueId, customerId },
+      );
+      return r.venueCustomerSubscriptions.map(mapSubscription);
     },
   });
 }

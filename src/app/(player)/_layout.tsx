@@ -9,7 +9,8 @@ import { Colors } from '@/constants/theme';
 const TABS = [
   { name: 'index', label: 'Home', icon: 'home-outline', active: 'home' },
   { name: 'venues', label: 'Venues', icon: 'business-outline', active: 'business' },
-  { name: 'leagues', label: 'Leagues', icon: 'trophy-outline', active: 'trophy' },
+  { name: 'clan', label: 'Clan', icon: 'people-outline', active: 'people' },
+  { name: 'my-games', label: 'My Games', icon: 'football-outline', active: 'football' },
   { name: 'profile', label: 'Profile', icon: 'person-circle-outline', active: 'person-circle' },
 ] as const;
 

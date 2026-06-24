@@ -29,6 +29,7 @@ export function BookingReviewModal({
       onConfirm={onConfirm}
       title="Confirm booking"
       confirmLabel="Confirm"
+      cancelDestructive
       placement="center"
       loading={loading}
       error={error}>

@@ -156,6 +156,42 @@ export function useVenueBookings(scope: 'today' | 'upcoming') {
   });
 }
 
+/** A non-cancelled booking on a specific day, kept raw for the per-court calendar grid. */
+export interface CalendarBooking {
+  id: string;
+  courtId: string;
+  startAt: string;
+  endAt: string;
+  source: 'WALK_IN' | 'ONLINE' | 'SUBSCRIPTION';
+  customer: string;
+}
+
+function mapCalendarBooking(b: ApiBooking): CalendarBooking {
+  return {
+    id: b.id,
+    courtId: b.courtId,
+    startAt: b.startAt,
+    endAt: b.endAt,
+    source: b.source,
+    customer: b.customerName ?? 'Walk-in',
+  };
+}
+
+/** Non-cancelled bookings for a single venue-local day (drives the booking calendar grid). */
+export function useVenueDayBookings(date: string | undefined) {
+  const venueId = useActiveVenueId();
+  return useQuery({
+    queryKey: ['venueDayBookings', venueId, date],
+    enabled: isApiConfigured && !!venueId && !!date,
+    queryFn: async (): Promise<CalendarBooking[]> => {
+      const r = await gqlRequest<{ venueBookings: ApiBooking[] }>(VENUE_BOOKINGS, {
+        input: { venueId, date },
+      });
+      return r.venueBookings.filter((b) => b.status !== 'CANCELLED').map(mapCalendarBooking);
+    },
+  });
+}
+
 export interface VenueCourtOption {
   id: string;
   name: string;

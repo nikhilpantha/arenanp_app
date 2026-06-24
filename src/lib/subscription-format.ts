@@ -58,18 +58,19 @@ export interface SlotOption {
  * the session length. E.g. band 6:00–8:00 + 60 min → 6:00 and 7:00.
  */
 export function slotOptions(windows: TimeWindow[], sessionMinutes: number): SlotOption[] {
-  const out: SlotOption[] = [];
+  // Collect distinct start minutes — overlapping/duplicate bands must not repeat a slot.
+  const starts = new Set<number>();
   for (const w of windows) {
     const start = toMinutes(w.start);
     const end = toMinutes(w.end);
-    for (let t = start; t + sessionMinutes <= end; t += sessionMinutes) {
-      out.push({
-        start: `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`,
-        label: `${formatClock(t)} – ${formatClock(t + sessionMinutes)}`,
-      });
-    }
+    for (let t = start; t + sessionMinutes <= end; t += sessionMinutes) starts.add(t);
   }
-  return out;
+  return [...starts]
+    .sort((a, b) => a - b)
+    .map((t) => ({
+      start: `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`,
+      label: `${formatClock(t)} – ${formatClock(t + sessionMinutes)}`,
+    }));
 }
 
 /** Session length label, e.g. 60 → "1 hr", 90 → "1.5 hr", 30 → "30 min". */
@@ -134,6 +135,7 @@ export function subscriptionToSession(s: Subscription, dateIso: string): VenueBo
 }
 
 const STATUS_TO_RECURRING: Record<Subscription['status'], RecurringStatus> = {
+  pending: 'active', // pending requests live in the Requests tab, not the recurring list
   scheduled: 'active', // the Memberships tab only shows active, so this never surfaces
   active: 'active',
   paused: 'paused',

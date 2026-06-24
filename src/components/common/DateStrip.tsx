@@ -14,11 +14,11 @@ interface Day {
   day: number;
 }
 
-function buildDays(count: number): Day[] {
-  const today = new Date();
+function buildDays(count: number, startIso?: string): Day[] {
+  const base = startIso ? new Date(startIso) : new Date();
   return Array.from({ length: count }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
     return {
       iso: d.toISOString().slice(0, 10),
       weekday: WEEKDAYS[d.getDay()],
@@ -31,17 +31,19 @@ export interface DateStripProps {
   /** Selected day as "YYYY-MM-DD". */
   value: string;
   onChange: (iso: string) => void;
-  /** How many days to show, starting today (default 14). */
+  /** How many days to show (default 14). */
   count?: number;
+  /** First day to show as "YYYY-MM-DD" (default today) — lets callers page by month. */
+  start?: string;
 }
 
 /**
- * The app's horizontal day picker — today first, selected day filled with the accent.
- * Reusable across booking, calendar, memberships, etc.
+ * The app's horizontal day picker — selected day filled with the accent. Defaults to a
+ * today-forward strip; pass `start`/`count` to render a specific window (e.g. a month).
  */
-export function DateStrip({ value, onChange, count = 14 }: DateStripProps) {
+export function DateStrip({ value, onChange, count = 14, start }: DateStripProps) {
   const theme = useTheme();
-  const days = useMemo(() => buildDays(count), [count]);
+  const days = useMemo(() => buildDays(count, start), [count, start]);
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>

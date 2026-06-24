@@ -8,6 +8,10 @@ export interface AuthUser {
   id: string;
   phone?: string;
   fullName?: string;
+  /** Email (optional — set from the account/edit-profile screen). */
+  email?: string;
+  /** Avatar object key (presign for display via `useDisplayUri`). */
+  avatarUrl?: string;
   /** Platform capabilities from the backend `me` query. */
   capabilities?: Capability[];
   /** Venue memberships from the backend `me` query. */

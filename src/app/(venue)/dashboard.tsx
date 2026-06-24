@@ -13,6 +13,7 @@ import { WeeklyPerformance } from '@/components/venue/dashboard/WeeklyPerformanc
 import { VenueHeader } from '@/components/venue/VenueHeader';
 import { VENUE_STATUS_BADGE, VenueSwitcherSheet } from '@/components/venue/VenueSwitcherSheet';
 import { useTheme } from '@/hooks/use-theme';
+import { useDisplayUri } from '@/lib/api/uploads';
 import { primaryVenueMembership } from '@/lib/panels';
 import { useActiveVenueStore, useAuthStore } from '@/stores';
 
@@ -22,6 +23,7 @@ export default function VenueDashboard() {
   const profile = useAuthStore((s) => s.profile);
   const activeVenueId = useActiveVenueStore((s) => s.activeVenueId);
   const name = profile?.fullName ?? 'Venue';
+  const avatarUri = useDisplayUri(profile?.avatarUrl);
   const memberships = profile?.venueMemberships ?? [];
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
@@ -33,6 +35,7 @@ export default function VenueDashboard() {
       <Screen scroll tabBarSafe>
         <VenueHeader
           avatarName={name}
+          avatarSrc={avatarUri}
           eyebrow="Welcome back"
           title="Your venues"
           onAvatarPress={openAccount}
@@ -52,6 +55,7 @@ export default function VenueDashboard() {
     <Screen scroll tabBarSafe>
       <VenueHeader
         avatarName={name}
+        avatarSrc={avatarUri}
         eyebrow="Welcome back"
         title={active.venueName}
         onTitlePress={() => setSwitcherOpen(true)}

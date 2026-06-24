@@ -23,6 +23,21 @@ export const signupSchema = yup.object({
 
 export type SignupFormValues = yup.InferType<typeof signupSchema>;
 
+/** Edit profile: identity fields a signed-in user can change (phone stays fixed). */
+export const editProfileSchema = yup.object({
+  /** Avatar — a local device URI when freshly picked, else the existing key/URL. */
+  photo: yup.string().optional(),
+  fullName: yup.string().required('Name is required').min(2, 'Too short'),
+  email: yup
+    .string()
+    // Treat a blank field as "no email" so the optional check doesn't fail on ''.
+    .transform((value) => (value === '' ? undefined : value))
+    .email('Enter a valid email')
+    .optional(),
+});
+
+export type EditProfileFormValues = yup.InferType<typeof editProfileSchema>;
+
 /** Login: phone + password. */
 export const loginSchema = yup.object({
   phone: yup.string().required('Mobile number is required').length(10, 'Enter a 10-digit number'),

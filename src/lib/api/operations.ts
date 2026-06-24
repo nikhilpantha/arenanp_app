@@ -371,6 +371,224 @@ export const DELETE_CLOSURE = /* GraphQL */ `
   }
 `;
 
+// ── Player discovery (browse venues marketplace) ─────────────────────────────
+
+export interface ApiSportStub {
+  slug: string;
+  name: string;
+  /** Presigned download URL (null when no icon uploaded). */
+  iconUrl: string | null;
+}
+
+export interface ApiVenueCard {
+  id: string;
+  name: string;
+  city: string | null;
+  address: string | null;
+  /** Presigned cover image URL (resolved server-side; null when none). */
+  coverImageUrl: string | null;
+  sports: ApiSportStub[];
+  /** Lowest active court price/hour (null when no active courts). */
+  priceFrom: number | null;
+  openTime: string;
+  closeTime: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+const VENUE_CARD_FIELDS = `
+  id
+  name
+  city
+  address
+  coverImageUrl
+  sports { slug name iconUrl }
+  priceFrom
+  openTime
+  closeTime
+  latitude
+  longitude
+`;
+
+/** Public marketplace: approved venues, filtered + offset-paginated. */
+export const BROWSE_VENUES = /* GraphQL */ `
+  query Venues($input: BrowseVenuesInput!) {
+    venues(input: $input) {
+      items { ${VENUE_CARD_FIELDS} }
+      pageInfo { page pageSize totalItems totalPages hasNextPage hasPreviousPage }
+    }
+  }
+`;
+
+export interface ApiPublicCourt {
+  id: string;
+  name: string;
+  sport: ApiSportStub;
+  pricePerHour: number;
+  slotMinutes: number;
+  features: string[];
+  imageUrls: string[];
+}
+
+export interface ApiVenueDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  city: string | null;
+  address: string | null;
+  contactPhone: string | null;
+  coverImageUrl: string | null;
+  imageUrls: string[];
+  amenities: string[];
+  additionalServices: { name: string; price: number | null }[];
+  sports: ApiSportStub[];
+  courts: ApiPublicCourt[];
+  openTime: string;
+  closeTime: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/** Public venue detail with its bookable courts (presigned image urls). */
+export const VENUE_DETAIL = /* GraphQL */ `
+  query Venue($venueId: ID!) {
+    venue(venueId: $venueId) {
+      id
+      name
+      description
+      city
+      address
+      contactPhone
+      coverImageUrl
+      imageUrls
+      amenities
+      additionalServices { name price }
+      sports { slug name iconUrl }
+      courts {
+        id
+        name
+        sport { slug name iconUrl }
+        pricePerHour
+        slotMinutes
+        features
+        imageUrls
+      }
+      openTime
+      closeTime
+      latitude
+      longitude
+    }
+  }
+`;
+
+// ── Court availability (public, for the booking flow) ────────────────────────
+
+export interface ApiCourtSlot {
+  startAt: string;
+  endAt: string;
+  available: boolean;
+  price: number;
+}
+
+export interface ApiCourtSlots {
+  courtId: string;
+  date: string;
+  slotMinutes: number;
+  slots: ApiCourtSlot[];
+}
+
+export const COURT_SLOTS = /* GraphQL */ `
+  query CourtSlots($input: CourtSlotsInput!) {
+    courtSlots(input: $input) {
+      courtId
+      date
+      slotMinutes
+      slots { startAt endAt available price }
+    }
+  }
+`;
+
+// ── Player offers (publicly listed, applied via promo code) ──────────────────
+
+export interface ApiPlayerOffer {
+  id: string;
+  title: string;
+  description: string | null;
+  discountType: ApiOfferDiscountType;
+  discountValue: number;
+  maxDiscount: number | null;
+  minSubtotal: number;
+  code: string | null;
+}
+
+export const AVAILABLE_OFFERS = /* GraphQL */ `
+  query AvailableOffers($venueId: ID!) {
+    availableOffers(venueId: $venueId) {
+      id
+      title
+      description
+      discountType
+      discountValue
+      maxDiscount
+      minSubtotal
+      code
+    }
+  }
+`;
+
+// ── Player bookings (createBooking / myBookings / cancelMyBooking) ────────────
+
+const PLAYER_BOOKING_FIELDS = `
+  id
+  venue { id name city address }
+  courtId
+  courtName
+  sport { slug name }
+  startAt
+  endAt
+  durationMinutes
+  status
+  total
+  paymentStatus
+  createdAt
+`;
+
+export interface ApiPlayerBooking {
+  id: string;
+  venue: { id: string; name: string; city: string | null; address: string | null };
+  courtId: string;
+  courtName: string;
+  sport: { slug: string; name: string };
+  startAt: string;
+  endAt: string;
+  durationMinutes: number;
+  status: ApiBookingStatus;
+  total: number;
+  paymentStatus: ApiBookingPaymentStatus;
+  createdAt: string;
+}
+
+export const MY_BOOKINGS = /* GraphQL */ `
+  query MyBookings($input: MyBookingsInput!) {
+    myBookings(input: $input) {
+      items { ${PLAYER_BOOKING_FIELDS} }
+      pageInfo { page pageSize totalItems totalPages hasNextPage hasPreviousPage }
+    }
+  }
+`;
+
+export const CREATE_BOOKING = /* GraphQL */ `
+  mutation CreateBooking($input: CreateBookingInput!) {
+    createBooking(input: $input) { ${PLAYER_BOOKING_FIELDS} }
+  }
+`;
+
+export const CANCEL_MY_BOOKING = /* GraphQL */ `
+  mutation CancelMyBooking($input: CancelMyBookingInput!) {
+    cancelMyBooking(input: $input) { id status }
+  }
+`;
+
 // ── Venue customers (people and teams, one table) ────────────────────────────
 
 const CUSTOMER_FIELDS = `
@@ -378,8 +596,11 @@ const CUSTOMER_FIELDS = `
   name
   phone
   notes
+  kind
   gamesPlayed
   freeGameReady
+  totalSpent
+  lastVisitAt
   createdAt
 `;
 
@@ -408,13 +629,18 @@ export const VENUE_CUSTOMER_BOOKINGS = /* GraphQL */ `
   }
 `;
 
+export type ApiCustomerKind = 'INDIVIDUAL' | 'TEAM' | 'CLUB';
+
 export interface ApiVenueCustomer {
   id: string;
   name: string;
   phone: string | null;
   notes: string | null;
+  kind: ApiCustomerKind;
   gamesPlayed: number;
   freeGameReady: boolean;
+  totalSpent: number;
+  lastVisitAt: string | null;
   createdAt: string;
 }
 
@@ -450,7 +676,13 @@ export type ApiMembershipDuration =
   | 'QUARTERLY'
   | 'HALF_YEARLY'
   | 'YEARLY';
-export type ApiSubscriptionStatus = 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'CANCELLED' | 'EXPIRED';
+export type ApiSubscriptionStatus =
+  | 'PENDING'
+  | 'SCHEDULED'
+  | 'ACTIVE'
+  | 'PAUSED'
+  | 'CANCELLED'
+  | 'EXPIRED';
 
 const MEMBERSHIP_PLAN_FIELDS = `
   id
@@ -500,6 +732,13 @@ export const VENUE_MEMBERSHIP_PLANS = /* GraphQL */ `
   }
 `;
 
+/** Public: a venue's active plans for the player venue-detail screen (no venue auth). */
+export const VENUE_PUBLIC_PLANS = /* GraphQL */ `
+  query VenuePublicPlans($venueId: ID!) {
+    venuePublicPlans(venueId: $venueId) { ${MEMBERSHIP_PLAN_FIELDS} }
+  }
+`;
+
 export const CREATE_MEMBERSHIP_PLAN = /* GraphQL */ `
   mutation CreateMembershipPlan($input: CreateMembershipPlanInput!) {
     createMembershipPlan(input: $input) { ${MEMBERSHIP_PLAN_FIELDS} }
@@ -533,6 +772,13 @@ export const VENUE_SUBSCRIPTION = /* GraphQL */ `
   }
 `;
 
+/** A customer's memberships (most recent first) for the unified customer profile. */
+export const VENUE_CUSTOMER_SUBSCRIPTIONS = /* GraphQL */ `
+  query VenueCustomerSubscriptions($venueId: ID!, $customerId: ID!) {
+    venueCustomerSubscriptions(venueId: $venueId, customerId: $customerId) { ${SUBSCRIPTION_FIELDS} }
+  }
+`;
+
 export const CREATE_SUBSCRIPTION = /* GraphQL */ `
   mutation CreateSubscription($input: CreateSubscriptionInput!) {
     createSubscription(input: $input) { ${SUBSCRIPTION_FIELDS} }
@@ -542,6 +788,27 @@ export const CREATE_SUBSCRIPTION = /* GraphQL */ `
 export const RENEW_SUBSCRIPTION = /* GraphQL */ `
   mutation RenewSubscription($input: RenewSubscriptionInput!) {
     renewSubscription(input: $input) { ${SUBSCRIPTION_FIELDS} }
+  }
+`;
+
+// ── Player memberships (self-subscribe + own list) ───────────────────────────
+
+export const CREATE_MY_SUBSCRIPTION = /* GraphQL */ `
+  mutation CreateMySubscription($input: CreateMySubscriptionInput!) {
+    createMySubscription(input: $input) { ${SUBSCRIPTION_FIELDS} }
+  }
+`;
+
+export const MY_SUBSCRIPTIONS = /* GraphQL */ `
+  query MySubscriptions {
+    mySubscriptions { ${SUBSCRIPTION_FIELDS} }
+  }
+`;
+
+/** Public: daily slot starts ("HH:mm") already taken on a court over a date range. */
+export const COURT_TAKEN_SLOTS = /* GraphQL */ `
+  query CourtTakenSlots($courtId: ID!, $startDate: String!, $endDate: String!) {
+    courtTakenSlots(courtId: $courtId, startDate: $startDate, endDate: $endDate)
   }
 `;
 

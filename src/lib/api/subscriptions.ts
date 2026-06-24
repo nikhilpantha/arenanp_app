@@ -25,6 +25,7 @@ import {
   UPDATE_MEMBERSHIP_PLAN,
   VENUE_MEMBERSHIP_PLANS,
   VENUE_MEMBERSHIP_STATS,
+  VENUE_PUBLIC_PLANS,
   VENUE_SUBSCRIPTION,
   VENUE_SUBSCRIPTIONS,
 } from './operations';
@@ -50,9 +51,16 @@ const DURATION_FROM_API: Record<ApiMembershipDuration, MembershipDuration> = {
   YEARLY: 'yearly',
 };
 
-export type SubscriptionStatus = 'scheduled' | 'active' | 'paused' | 'cancelled' | 'expired';
+export type SubscriptionStatus =
+  | 'pending'
+  | 'scheduled'
+  | 'active'
+  | 'paused'
+  | 'cancelled'
+  | 'expired';
 
 const STATUS_FROM_API: Record<ApiSubscriptionStatus, SubscriptionStatus> = {
+  PENDING: 'pending',
   SCHEDULED: 'scheduled',
   ACTIVE: 'active',
   PAUSED: 'paused',
@@ -61,6 +69,7 @@ const STATUS_FROM_API: Record<ApiSubscriptionStatus, SubscriptionStatus> = {
 };
 
 const STATUS_TO_API: Record<SubscriptionStatus, ApiSubscriptionStatus> = {
+  pending: 'PENDING',
   scheduled: 'SCHEDULED',
   active: 'ACTIVE',
   paused: 'PAUSED',
@@ -176,7 +185,7 @@ function mapPayment(p: ApiSubscriptionPayment): SubscriptionPayment {
   };
 }
 
-function mapSubscription(s: ApiSubscription): Subscription {
+export function mapSubscription(s: ApiSubscription): Subscription {
   return {
     id: s.id,
     planId: s.planId,
@@ -228,6 +237,24 @@ export function useMembershipPlans(activeOnly?: boolean) {
         { input: { venueId, activeOnly } },
       );
       return r.venueMembershipPlans.map(mapPlan);
+    },
+  });
+}
+
+/**
+ * Public: the active membership plans for a given venue, for the player venue-detail
+ * screen. Unlike `useMembershipPlans` (which reads the owner's active venue), this takes
+ * an explicit venueId and only ever returns active plans.
+ */
+export function useVenueMembershipPlans(venueId: string | undefined) {
+  return useQuery({
+    queryKey: ['publicVenueMembershipPlans', venueId],
+    enabled: isApiConfigured && !!venueId,
+    queryFn: async (): Promise<MembershipPlan[]> => {
+      const r = await gqlRequest<{ venuePublicPlans: ApiMembershipPlan[] }>(VENUE_PUBLIC_PLANS, {
+        venueId,
+      });
+      return r.venuePublicPlans.map(mapPlan);
     },
   });
 }

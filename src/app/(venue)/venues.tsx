@@ -7,6 +7,7 @@ import { VenueIdentityCard } from '@/components/venue/profile/VenueIdentityCard'
 import { VenueHeader } from '@/components/venue/VenueHeader';
 import { VenueSwitcherSheet } from '@/components/venue/VenueSwitcherSheet';
 import { MANAGE_ROWS, type ProfileRowItem } from '@/data/venue-profile';
+import { useRefresh } from '@/hooks/use-refresh';
 import { mapApiVenueToForm, useMyVenue } from '@/lib/api/venue';
 import { useVenueStore } from '@/stores';
 
@@ -22,6 +23,7 @@ export default function VenueVenues() {
 
   // Hydrate the venue store from the backend (drives the identity card + edit forms).
   const myVenueQ = useMyVenue();
+  const { refreshing, onRefresh } = useRefresh(myVenueQ);
   const hydrateVenue = useVenueStore((s) => s.hydrate);
   useEffect(() => {
     if (myVenueQ.data) {
@@ -39,7 +41,7 @@ export default function VenueVenues() {
   };
 
   return (
-    <Screen scroll tabBarSafe>
+    <Screen scroll tabBarSafe refreshing={refreshing} onRefresh={onRefresh}>
       <VenueHeader title="Venues" />
 
       <VenueIdentityCard onPress={() => setSwitcherOpen(true)} />

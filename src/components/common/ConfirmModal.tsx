@@ -29,6 +29,8 @@ export interface ConfirmModalProps {
   /** Red confirm button for irreversible actions (delete, cancel…). */
   destructive?: boolean;
   confirmIcon?: IconName;
+  /** Give the cancel button red text + an X icon. */
+  cancelDestructive?: boolean;
   /** Dialog vs bottom sheet. Defaults to a bottom sheet. */
   placement?: ModalPlacement;
 }
@@ -52,6 +54,7 @@ export function ConfirmModal({
   error,
   destructive = false,
   confirmIcon = 'check',
+  cancelDestructive = false,
   placement = 'bottom',
 }: ConfirmModalProps) {
   const theme = useTheme();
@@ -87,6 +90,7 @@ export function ConfirmModal({
           loading={loading}
           destructive={destructive}
           confirmIcon={confirmIcon}
+          cancelDestructive={cancelDestructive}
         />
       </View>
     </Modal>

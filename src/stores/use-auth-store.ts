@@ -65,6 +65,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
       id: session.user.id,
       fullName: session.user.fullName,
       phone: session.user.phone,
+      email: session.user.email,
+      avatarUrl: session.user.avatarUrl,
       capabilities,
       venueMemberships:
         session.user.venueMemberships ?? venueMembershipsFromCapabilities(capabilities),

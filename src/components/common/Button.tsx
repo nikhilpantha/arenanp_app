@@ -26,6 +26,8 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
   size?: ButtonSize;
   leftIcon?: IconName;
   rightIcon?: IconName;
+  /** Override the label + icon color (e.g. a red cancel). Ignored while disabled/loading. */
+  labelColor?: string;
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -128,6 +130,7 @@ export function Button({
   size = 'md',
   leftIcon,
   rightIcon,
+  labelColor,
   loading = false,
   disabled = false,
   fullWidth = false,
@@ -148,7 +151,8 @@ export function Button({
   const isInactive = disabled || loading;
   const hasLabel = Boolean(children);
   const isIconOnly = !hasLabel && Boolean(leftIcon ?? rightIcon);
-  const iconColor = iconColorMap[effectiveVariant][scheme][isInactive ? 'disabled' : 'default'];
+  const baseColor = iconColorMap[effectiveVariant][scheme][isInactive ? 'disabled' : 'default'];
+  const iconColor = labelColor && !isInactive ? labelColor : baseColor;
 
   const handlePress = (e: GestureResponderEvent) => {
     if (isInactive) return;

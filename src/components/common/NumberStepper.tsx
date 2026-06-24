@@ -11,10 +11,12 @@ export interface NumberStepperProps {
   onChange: (value: number) => void;
   min?: number;
   max?: number;
+  /** Render a label for the value (e.g. slots → "3 hr"); defaults to the number itself. */
+  format?: (value: number) => string;
 }
 
 /** Compact − value + control for small integer counts (e.g. number of courts). */
-export function NumberStepper({ value, onChange, min = 1, max = 99 }: NumberStepperProps) {
+export function NumberStepper({ value, onChange, min = 1, max = 99, format }: NumberStepperProps) {
   const theme = useTheme();
   const { accent } = useAccent();
 
@@ -30,8 +32,8 @@ export function NumberStepper({ value, onChange, min = 1, max = 99 }: NumberStep
         style={{ backgroundColor: theme.cardMuted, opacity: value <= min ? 0.4 : 1 }}>
         <Icon name="minus" size={16} color={theme.ink} />
       </Pressable>
-      <Typography variant="label-lg" style={{ minWidth: 20, textAlign: 'center' }}>
-        {value}
+      <Typography variant="label-lg" style={{ minWidth: format ? 56 : 20, textAlign: 'center' }}>
+        {format ? format(value) : value}
       </Typography>
       <Pressable
         onPress={() => set(value + 1)}

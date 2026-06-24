@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Spacing } from '@/constants/theme';
 import { useKeyboardHeight } from '@/hooks/use-keyboard';
 
+import { AppRefreshControl } from './AppRefreshControl';
 import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
 import { KeyboardView } from './KeyboardView';
 import { Screen } from './Screen';
@@ -17,6 +18,10 @@ export interface FormScreenProps {
   footer?: React.ReactNode;
   /** Scroll the body instead of fixing it (default false). */
   scroll?: boolean;
+  /** Pull-to-refresh handler. Only applies when `scroll`; wire it with `useRefresh`. */
+  onRefresh?: () => void;
+  /** Whether a pull-to-refresh is in flight (drives the spinner). Pair with `onRefresh`. */
+  refreshing?: boolean;
 }
 
 /**
@@ -31,7 +36,14 @@ export interface FormScreenProps {
  * • Without a footer (an in-body CTA) — `KeyboardView` + the scroll view's keyboard inset
  *   keep the CTA reachable.
  */
-export function FormScreen({ children, header, footer, scroll = false }: FormScreenProps) {
+export function FormScreen({
+  children,
+  header,
+  footer,
+  scroll = false,
+  onRefresh,
+  refreshing = false,
+}: FormScreenProps) {
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
   // Guarantee a minimum gap above the nav bar / home indicator even on gesture-nav
@@ -47,6 +59,11 @@ export function FormScreen({ children, header, footer, scroll = false }: FormScr
       // With a footer, the body sits above the lifted footer and never meets the keyboard,
       // so the scroll view's own keyboard inset would only double up — turn it off.
       automaticallyAdjustKeyboardInsets={!footer}
+      refreshControl={
+        onRefresh ? (
+          <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        ) : undefined
+      }
       contentContainerStyle={{
         paddingVertical: Spacing.md,
         paddingBottom: footer ? Spacing.md : bottomGap,

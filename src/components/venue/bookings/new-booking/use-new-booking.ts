@@ -29,6 +29,9 @@ export function useNewBooking() {
   const params = useLocalSearchParams<{
     sport?: string;
     court?: string;
+    // Court id + day pre-selected when opened from the booking calendar's empty slot.
+    courtId?: string;
+    date?: string;
     time?: string;
     price?: string;
     // Pre-selected customer (e.g. when starting a booking from a customer's screen).
@@ -48,7 +51,7 @@ export function useNewBooking() {
     defaultValues: { customerName: params.customerName ?? '', phone: params.customerPhone ?? '' },
   });
 
-  const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
+  const [selectedCourtId, setSelectedCourtId] = useState<string | null>(params.courtId ?? null);
   const [customerPickerVisible, setCustomerPickerVisible] = useState(false);
   // Pre-select the customer when opened from their screen.
   const [selectedCustomer, setSelectedCustomer] = useState<PickedCustomer | null>(() =>
@@ -56,7 +59,7 @@ export function useNewBooking() {
       ? { id: params.customerId, name: params.customerName ?? 'Customer', phone: params.customerPhone }
       : null,
   );
-  const [date, setDate] = useState(() => todayIso());
+  const [date, setDate] = useState(() => params.date ?? todayIso());
   const [startTime, setStartTime] = useState(() => to24h(params.time) ?? '18:00');
   const [duration, setDuration] = useState(1);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');

@@ -38,6 +38,17 @@ export function labelToMinutes(label: string): number | null {
   return h * 60 + (m || 0);
 }
 
+/** Is "now" within the [open, close) window? Handles overnight ranges (close ≤ open). */
+export function isOpenNow(openLabel: string, closeLabel: string, now = new Date()): boolean {
+  const open = labelToMinutes(openLabel);
+  const close = labelToMinutes(closeLabel);
+  if (open == null || close == null) return false;
+  const cur = now.getHours() * 60 + now.getMinutes();
+  // A close time at or before the open time means the venue runs past midnight.
+  if (close <= open) return cur >= open || cur < close;
+  return cur >= open && cur < close;
+}
+
 /** "YYYY-MM-DD" + "18:00" → an ISO datetime at that local time. */
 export function startIso(date: string, time: string): string {
   const [h, m] = time.split(':').map(Number);

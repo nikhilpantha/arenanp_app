@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { toE164 } from '@/components/common';
 import type { VenueFormValues } from '@/components/venue/onboarding/form';
+import { useAuthStore } from '@/stores';
 import type { SportType } from '@/types';
 
 import { gqlRequest, isApiConfigured } from './client';
@@ -95,13 +96,17 @@ export function useMyVenue() {
 export function useUpdateVenueProfile() {
   const venueId = useActiveVenueId();
   const qc = useQueryClient();
+  const reloadIdentity = useAuthStore((s) => s.reloadIdentity);
   return useMutation({
     mutationFn: (values: VenueFormValues) => {
       if (!venueId) throw new Error('No venue to update.');
       return gqlRequest(UPDATE_VENUE_PROFILE, { input: mapFormToUpdateInput(venueId, values) });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ['myVenue', venueId] });
+      // The venue name lives in the auth store's membership list too (the switcher
+      // sheet reads it) — refresh identity so a renamed venue isn't stale there.
+      await reloadIdentity();
     },
   });
 }

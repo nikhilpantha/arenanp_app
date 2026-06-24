@@ -4,6 +4,7 @@ import { type Edge, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-ar
 import { Spacing, TAB_BAR_HEIGHT } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+import { AppRefreshControl } from './AppRefreshControl';
 import { GradientBackground } from './GradientBackground';
 import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
 import { KeyboardView } from './KeyboardView';
@@ -19,6 +20,10 @@ export interface ScreenProps {
   edges?: readonly Edge[];
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  /** Pull-to-refresh handler. Only applies when `scroll`; wire it with `useRefresh`. */
+  onRefresh?: () => void;
+  /** Whether a pull-to-refresh is in flight (drives the spinner). Pair with `onRefresh`. */
+  refreshing?: boolean;
   testID?: string;
 }
 
@@ -31,6 +36,8 @@ export function Screen({
   edges = ['top', 'left', 'right'],
   style,
   contentContainerStyle,
+  onRefresh,
+  refreshing = false,
   testID,
 }: ScreenProps) {
   const theme = useTheme();
@@ -51,7 +58,14 @@ export function Screen({
       {/* Keyboard-aware so any inputs inside a scrolling screen stay clear of the keyboard
           (iOS via content insets, Android via the KeyboardView's padding). */}
       <KeyboardView>
-        <KeyboardAwareScrollView style={styles.flex} contentContainerStyle={contentStyle}>
+        <KeyboardAwareScrollView
+          style={styles.flex}
+          contentContainerStyle={contentStyle}
+          refreshControl={
+            onRefresh ? (
+              <AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            ) : undefined
+          }>
           {children}
         </KeyboardAwareScrollView>
       </KeyboardView>

@@ -1,63 +1,87 @@
-import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Card, DateStrip, Typography } from '@/components/common';
-import { getSchedule, VENUE_SPORTS } from '@/data/bookings';
+import { Card, Icon, InlineLoader, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
+import { useVenueCourts, useVenueDayBookings } from '@/lib/api/venue-bookings';
 import type { SportType } from '@/types';
 
+import { buildCourtSchedules } from './calendar-grid';
 import { useSlotStatusMeta } from './slot-status';
 import { SlotRow } from './SlotRow';
 import { StatusLegend } from './StatusLegend';
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
-
-/** The day calendar (kept from the existing schedule design) — per-court hourly slots. */
-export function CalendarTab({ scope }: { scope: SportType | 'all' }) {
+/**
+ * Per-court day calendar on live data: the venue's real courts (filtered by sport scope)
+ * with each day's bookings overlaid. Empty slots are tappable and open the New booking
+ * screen pre-filled with that court, day and time; booked slots show who holds them.
+ */
+export function CalendarTab({ scope, date }: { scope: SportType | 'all'; date: string }) {
   const theme = useTheme();
   const router = useRouter();
   const meta = useSlotStatusMeta();
-  const [date, setDate] = useState(todayIso());
 
-  // The slot grid is per-sport; fall back to the first court sport when scope is "All".
-  const sport = scope !== 'all' && VENUE_SPORTS.includes(scope) ? scope : VENUE_SPORTS[0];
-  const schedule = getSchedule(sport);
+  const courtsQ = useVenueCourts();
+  const bookingsQ = useVenueDayBookings(date);
 
-  const onSlotPress = (slotId: string, court: string, price: number, status: string, time: string, customer?: string) => {
-    if (status === 'maintenance') return;
-    router.push({
-      pathname: '/booking/[id]',
-      params: { id: slotId, sport, court, time, price: String(price), customer: customer ?? '', status },
-    });
-  };
+  const courts = (courtsQ.data ?? []).filter((c) => scope === 'all' || c.sportSlug === scope);
+  const schedules = buildCourtSchedules(courts, bookingsQ.data ?? []);
+
+  if (courtsQ.isLoading) return <InlineLoader paddingVertical={48} />;
+
+  if (courts.length === 0) {
+    return (
+      <Card elevation="sm">
+        <View className="items-center gap-sm py-xl">
+          <Icon name="calendarDays" size={26} color={theme.inkMuted} />
+          <Typography variant="body-md" color={theme.inkMuted}>
+            {scope === 'all' ? 'No courts set up yet.' : 'No courts for this sport.'}
+          </Typography>
+        </View>
+      </Card>
+    );
+  }
 
   return (
     <View className="gap-lg">
-      <DateStrip value={date} onChange={setDate} />
       <StatusLegend meta={meta} />
+      {bookingsQ.isLoading ? <InlineLoader paddingVertical={16} /> : null}
 
-      {schedule.map(({ court, slots }) => (
+      {schedules.map(({ court, entries }) => (
         <View key={court.id} className="gap-sm">
           <View className="flex-row items-center justify-between">
             <Typography variant="label-lg">{court.name}</Typography>
             <Typography variant="label-sm" color={theme.inkMuted} style={{ textTransform: 'none' }}>
-              Rs {court.pricePerSlot}/slot
+              {court.sportLabel} · Rs {court.pricePerHour}/hr
             </Typography>
           </View>
           <Card elevation="sm">
-            {slots.map((slot, i) => (
+            {entries.map((entry, i) => (
               <View
-                key={slot.id}
-                style={i < slots.length - 1 ? { borderBottomWidth: 1, borderColor: theme.border } : undefined}>
+                key={entry.slot.id}
+                style={
+                  i < entries.length - 1 ? { borderBottomWidth: 1, borderColor: theme.border } : undefined
+                }>
                 <SlotRow
-                  slot={slot}
-                  price={court.pricePerSlot}
-                  meta={meta[slot.status]}
+                  slot={entry.slot}
+                  price={court.pricePerHour}
+                  meta={meta[entry.slot.status]}
+                  // Only empty slots are actionable → start a booking pre-filled with this slot.
                   onPress={
-                    slot.status === 'maintenance'
+                    entry.booking
                       ? undefined
-                      : () => onSlotPress(slot.id, court.name, court.pricePerSlot, slot.status, slot.time, slot.customerName)
+                      : () =>
+                          router.push({
+                            pathname: '/new-booking',
+                            params: {
+                              courtId: court.id,
+                              court: court.name,
+                              sport: court.sportSlug,
+                              price: String(court.pricePerHour),
+                              time: entry.slot.time,
+                              date,
+                            },
+                          })
                   }
                 />
               </View>

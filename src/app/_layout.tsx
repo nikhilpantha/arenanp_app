@@ -72,19 +72,16 @@ export default function RootLayout() {
                   <Stack.Screen name="(venue)" />
                 </Stack.Protected>
                 <Stack.Screen name="index" />
-                <Stack.Screen name="create-venue" />
-                <Stack.Screen name="venue-account" />
+                {/* Shared screens pushed from both panels. */}
                 <Stack.Screen name="notifications" />
-                {/* Venue booking flows (new-booking, booking detail, calendar, memberships)
-                    live in the (venue-booking) group; paths are unchanged. */}
-                <Stack.Screen name="(venue-booking)" />
-                <Stack.Screen name="customer/[id]" />
-                <Stack.Screen name="venue-edit/[section]" />
-                <Stack.Screen name="offers" />
-                <Stack.Screen name="offer/new" />
-                <Stack.Screen name="offer/[id]" />
-                <Stack.Screen name="member/[id]" />
-                <Stack.Screen name="team/[id]" />
+                <Stack.Screen name="edit-profile" />
+                {/* Every player-facing pushed screen — venue browse + booking detail,
+                    player calendar — lives in the (player-stack) group. */}
+                <Stack.Screen name="(player-stack)" />
+                {/* Every venue-owner pushed screen — account, bookings, calendar, memberships,
+                    offers, customers, members, teams, closures, venue editing, create-venue —
+                    lives in the (venue-stack) group. Route-group parens keep all URLs unchanged. */}
+                <Stack.Screen name="(venue-stack)" />
                 <Stack.Screen name="+not-found" />
               </Stack>
               {/* App is light-locked: dark icons on BOTH the status bar and the Android

@@ -55,6 +55,8 @@ function toSession(user: ApiUser, memberships: ApiVenueMembership[]): AuthSessio
       id: user.id,
       phone: user.phoneNumber,
       fullName: user.fullName ?? undefined,
+      email: user.email ?? undefined,
+      avatarUrl: user.avatarUrl ?? undefined,
       capabilities: user.capabilities as Capability[],
       venueMemberships: memberships.map(mapMembership),
     },

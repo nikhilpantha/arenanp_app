@@ -31,9 +31,10 @@ export const recurringBadge = (s: RecurringStatus): BadgeMeta => RECURRING_META[
 
 /** Membership badge — terminal/derived states win; otherwise "Active". */
 export const subscriptionBadge = (
-  status: 'scheduled' | 'active' | 'paused' | 'cancelled' | 'expired',
+  status: 'pending' | 'scheduled' | 'active' | 'paused' | 'cancelled' | 'expired',
   expiringSoon: boolean,
 ): BadgeMeta => {
+  if (status === 'pending') return { label: 'Pending', variant: 'warning' };
   if (status === 'scheduled') return { label: 'Upcoming', variant: 'info' };
   if (status === 'paused') return { label: 'Paused', variant: 'neutral' };
   if (status === 'expired') return { label: 'Expired', variant: 'danger' };

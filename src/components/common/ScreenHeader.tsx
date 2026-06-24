@@ -44,11 +44,15 @@ export function ScreenHeader({ title, onBack, backIcon = 'arrowLeft', right }: S
         )}
       </View>
 
-      <View className="flex-1 items-center">
-        {title ? <Typography variant="label-lg">{title}</Typography> : null}
+      <View className="flex-1 items-center px-sm">
+        {title ? (
+          <Typography variant="label-lg" numberOfLines={1} style={{ textAlign: 'center' }}>
+            {title}
+          </Typography>
+        ) : null}
       </View>
 
-      <View style={{ width: 44 }} className="items-end">
+      <View style={{ minWidth: 44 }} className="items-end">
         {right}
       </View>
     </View>

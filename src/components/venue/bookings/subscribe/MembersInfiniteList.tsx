@@ -1,6 +1,6 @@
 import { FlatList, View } from 'react-native';
 
-import { Card, Icon, InlineLoader, Typography } from '@/components/common';
+import { AppRefreshControl, Card, Icon, InlineLoader, Typography } from '@/components/common';
 import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Subscription } from '@/lib/api/subscriptions';
@@ -19,6 +19,8 @@ export function MembersInfiniteList({
   loadingMore,
   onEndReached,
   onOpen,
+  refreshing,
+  onRefresh,
 }: {
   members: Subscription[];
   query: string;
@@ -28,6 +30,8 @@ export function MembersInfiniteList({
   loadingMore?: boolean;
   onEndReached: () => void;
   onOpen: (s: Subscription) => void;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   const theme = useTheme();
 
@@ -69,6 +73,11 @@ export function MembersInfiniteList({
         showsVerticalScrollIndicator={false}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.4}
+        refreshControl={
+          onRefresh ? (
+            <AppRefreshControl refreshing={!!refreshing} onRefresh={onRefresh} />
+          ) : undefined
+        }
         ListFooterComponent={loadingMore ? <InlineLoader paddingVertical={16} /> : null}
       />
     </View>

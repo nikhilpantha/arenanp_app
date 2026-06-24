@@ -1,6 +1,6 @@
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
-import { Avatar, Badge, Button, Card, Icon, Typography } from '@/components/common';
+import { AppRefreshControl, Avatar, Badge, Button, Card, Icon, Typography } from '@/components/common';
 import { useTheme } from '@/hooks/use-theme';
 import type { VenueCustomer } from '@/lib/api/venue-customers';
 
@@ -18,6 +18,8 @@ export function VenueCustomerList({
   onOpen,
   onEndReached,
   onRetry,
+  refreshing,
+  onRefresh,
 }: {
   customers: VenueCustomer[];
   query: string;
@@ -27,6 +29,8 @@ export function VenueCustomerList({
   onOpen: (customer: VenueCustomer) => void;
   onEndReached?: () => void;
   onRetry?: () => void;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   const theme = useTheme();
 
@@ -76,6 +80,11 @@ export function VenueCustomerList({
         onEndReached={onEndReached}
         onEndReachedThreshold={0.4}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          onRefresh ? (
+            <AppRefreshControl refreshing={!!refreshing} onRefresh={onRefresh} />
+          ) : undefined
+        }
         ListFooterComponent={
           loadingMore ? (
             <View className="py-md">
@@ -98,9 +107,14 @@ function Row({ customer, onPress }: { customer: VenueCustomer; onPress: () => vo
       style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
       <Avatar fallback={customer.name} size={44} />
       <View className="flex-1 gap-[2px]">
-        <Typography variant="label-md" numberOfLines={1}>
-          {customer.name}
-        </Typography>
+        <View className="flex-row items-center gap-xs">
+          <Typography variant="label-md" numberOfLines={1} style={{ flexShrink: 1 }}>
+            {customer.name}
+          </Typography>
+          {customer.kind !== 'individual' ? (
+            <Badge variant="info">{customer.kind === 'team' ? 'Team' : 'Club'}</Badge>
+          ) : null}
+        </View>
         <Typography variant="body-md" color={theme.inkMuted} numberOfLines={1}>
           {customer.phone ? `${customer.phone} · ` : ''}
           {customer.gamesPlayed} games
